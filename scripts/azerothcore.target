@@ -1,0 +1,7 @@
+[Unit]
+Description=AzerothCore WoW Server (auth + world)
+Wants=azerothcore-authserver.service azerothcore-worldserver.service
+After=network-online.target mariadb.service mysql.service
+
+[Install]
+WantedBy=multi-user.target

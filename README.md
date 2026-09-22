@@ -23,10 +23,24 @@ Auto-deploy polls `origin/main` every **3 minutes** and restarts the dashboard w
 
 Edit `config/settings.yaml`:
 
-- `services` — systemd units to show (set `manage: true` to allow restart from the UI)
+- `services` — systemd units to show (set `manage: true` to allow start/stop/restart from the UI)
 - `server.port` — default `8080`
 
-Service restarts use `sudo -n systemctl restart` (passwordless sudo required).
+Service actions use `sudo -n systemctl start|stop|restart` (passwordless sudo required).
+
+### AzerothCore WoW server
+
+Install the bundled systemd units on the mini-PC (adjust paths in the unit files if needed):
+
+```bash
+bash scripts/install-azerothcore-service.sh
+```
+
+Grant the dashboard user passwordless control:
+
+```sudoers
+sylvester ALL=(ALL) NOPASSWD: /bin/systemctl start azerothcore*, /bin/systemctl stop azerothcore*, /bin/systemctl restart azerothcore*
+```
 
 ## Local dev
 

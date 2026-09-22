@@ -1,0 +1,16 @@
+[Unit]
+Description=AzerothCore World Server
+After=network-online.target azerothcore-authserver.service mariadb.service mysql.service
+Wants=network-online.target
+Requires=azerothcore-authserver.service
+
+[Service]
+Type=simple
+User=sylvester
+WorkingDirectory=/home/sylvester/azerothcore/server/bin
+ExecStart=/home/sylvester/azerothcore/server/bin/worldserver
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=azerothcore.target

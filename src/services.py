@@ -61,9 +61,22 @@ def list_services(configs: list[ServiceConfig]) -> list[dict[str, Any]]:
     return rows
 
 
-def restart_service(unit: str) -> tuple[bool, str]:
-    result = _run(["sudo", "-n", "systemctl", "restart", unit])
+def _control_service(unit: str, action: str) -> tuple[bool, str]:
+    result = _run(["sudo", "-n", "systemctl", action, unit])
     if result.returncode == 0:
-        return True, f"Restarted {unit}"
-    msg = (result.stderr or result.stdout or "restart failed").strip()
+        label = action.capitalize()
+        return True, f"{label}ed {unit}" if action != "stop" else f"Stopped {unit}"
+    msg = (result.stderr or result.stdout or f"{action} failed").strip()
     return False, msg
+
+
+def start_service(unit: str) -> tuple[bool, str]:
+    return _control_service(unit, "start")
+
+
+def stop_service(unit: str) -> tuple[bool, str]:
+    return _control_service(unit, "stop")
+
+
+def restart_service(unit: str) -> tuple[bool, str]:
+    return _control_service(unit, "restart")

@@ -9,7 +9,14 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 from src.config_loader import load_settings, manageable_service_units
 from src.metrics import get_host_metrics, get_top_processes
-from src.services import format_uptime, get_hostname_label, list_services, restart_service
+from src.services import (
+    format_uptime,
+    get_hostname_label,
+    list_services,
+    restart_service,
+    start_service,
+    stop_service,
+)
 
 router = APIRouter()
 
@@ -86,13 +93,12 @@ def processes_partial(request: Request):
     )
 
 
-@router.post("/actions/restart-service")
-def action_restart_service(request: Request, unit: str = Form(...)):
-    settings = _settings(request)
-    if unit not in manageable_service_units(settings):
-        raise HTTPException(status_code=400, detail="Service not allowed")
-
-    ok, message = restart_service(unit)
+def _service_action_response(
+    request: Request,
+    unit: str,
+    ok: bool,
+    message: str,
+):
     if request.headers.get("HX-Request"):
         return _templates(request).TemplateResponse(
             request,
@@ -103,6 +109,33 @@ def action_restart_service(request: Request, unit: str = Form(...)):
     if not ok:
         raise HTTPException(status_code=500, detail=message)
     return RedirectResponse("/services", status_code=303)
+
+
+def _assert_manageable_unit(request: Request, unit: str) -> None:
+    settings = _settings(request)
+    if unit not in manageable_service_units(settings):
+        raise HTTPException(status_code=400, detail="Service not allowed")
+
+
+@router.post("/actions/start-service")
+def action_start_service(request: Request, unit: str = Form(...)):
+    _assert_manageable_unit(request, unit)
+    ok, message = start_service(unit)
+    return _service_action_response(request, unit, ok, message)
+
+
+@router.post("/actions/stop-service")
+def action_stop_service(request: Request, unit: str = Form(...)):
+    _assert_manageable_unit(request, unit)
+    ok, message = stop_service(unit)
+    return _service_action_response(request, unit, ok, message)
+
+
+@router.post("/actions/restart-service")
+def action_restart_service(request: Request, unit: str = Form(...)):
+    _assert_manageable_unit(request, unit)
+    ok, message = restart_service(unit)
+    return _service_action_response(request, unit, ok, message)
 
 
 @router.get("/api/health")

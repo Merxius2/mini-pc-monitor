@@ -15,5 +15,8 @@ services:
   - unit: mini-pc-monitor.service
     label: Mini-PC Monitor
     manage: false
+  - unit: azerothcore.target
+    label: AzerothCore WoW Server
+    manage: true
 
 top_processes_limit: 8

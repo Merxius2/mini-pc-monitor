@@ -8,6 +8,21 @@
   <span class="service-meta">
     <span class="tag {% if svc.active == 'active' %}would_hold{% elif svc.active == 'failed' %}would_sell{% else %}no_action{% endif %}">{{ svc.active }}</span>
     {% if svc.manage %}
+    {% set is_running = svc.active in ('active', 'activating') %}
+    <form class="inline-form service-toggle-form"
+          hx-post="{% if is_running %}/actions/stop-service{% else %}/actions/start-service{% endif %}"
+          hx-target="#actionResult"
+          hx-swap="innerHTML">
+      <input type="hidden" name="unit" value="{{ svc.unit }}" />
+      <button type="submit"
+              class="bot-toggle service-toggle"
+              aria-checked="{{ 'true' if is_running else 'false' }}"
+              aria-label="{% if is_running %}Stop{% else %}Start{% endif %} {{ svc.label }}"
+              title="{% if is_running %}Stop{% else %}Start{% endif %} {{ svc.label }}">
+        <span class="bot-toggle-knob"></span>
+      </button>
+    </form>
+    {% if is_running %}
     <form class="inline-form"
           hx-post="/actions/restart-service"
           hx-target="#actionResult"
@@ -15,6 +30,7 @@
       <input type="hidden" name="unit" value="{{ svc.unit }}" />
       <button type="submit" class="btn btn-sm">Restart</button>
     </form>
+    {% endif %}
     {% endif %}
   </span>
 </div>

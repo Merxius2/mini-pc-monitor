@@ -1064,6 +1064,21 @@
 
   .inline-form { display: inline; margin: 0; }
 
+  .service-toggle {
+    width: 42px;
+    height: 22px;
+    flex-shrink: 0;
+  }
+
+  .service-toggle .bot-toggle-knob {
+    width: 16px;
+    height: 16px;
+  }
+
+  .service-toggle[aria-checked="true"] .bot-toggle-knob {
+    transform: translateX(20px);
+  }
+
   .btn-sm {
     padding: 0.25rem 0.55rem;
     font-size: 0.68rem;
