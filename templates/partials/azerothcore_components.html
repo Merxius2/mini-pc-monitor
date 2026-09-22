@@ -1,0 +1,15 @@
+<div class="service-ac-details ac-overall-{{ ac.overall }}">
+  <div class="service-ac-summary">{{ ac.summary }}</div>
+  <div class="ac-components ac-components-inline">
+    {% for comp in ac.components %}
+    <div class="ac-component ac-level-{{ comp.level }}">
+      <span class="ac-component-main">
+        <span class="signal-dot {% if comp.level == 'ok' %}signal-bull{% elif comp.level == 'warn' %}signal-bear{% else %}signal-neutral{% endif %}"></span>
+        <strong>{{ comp.label }}</strong>
+        <span class="tag {% if comp.level == 'ok' %}would_hold{% elif comp.level == 'amber' %}would_wait{% elif comp.level == 'warn' %}would_sell{% else %}no_action{% endif %}">{{ comp.state }}</span>
+      </span>
+      <span class="detail mono ac-component-detail">{{ comp.detail }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>

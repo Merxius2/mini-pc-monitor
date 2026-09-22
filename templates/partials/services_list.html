@@ -1,38 +1,68 @@
 {% for svc in services %}
-<div class="watch-item service-row">
-  <span>
-    <span class="signal-dot {% if svc.active == 'active' %}signal-bull{% elif svc.active == 'failed' %}signal-bear{% else %}signal-neutral{% endif %}"></span>
-    <strong>{{ svc.label }}</strong>
-    <span class="detail mono">{{ svc.unit }}</span>
-  </span>
-  <span class="service-meta">
-    <span class="tag {% if svc.active == 'active' %}would_hold{% elif svc.active == 'failed' %}would_sell{% else %}no_action{% endif %}">{{ svc.active }}</span>
-    {% if svc.manage %}
-    {% set is_running = svc.active in ('active', 'activating') %}
-    <form class="inline-form service-toggle-form"
-          hx-post="{% if is_running %}/actions/stop-service{% else %}/actions/start-service{% endif %}"
-          hx-target="#actionResult"
-          hx-swap="innerHTML">
-      <input type="hidden" name="unit" value="{{ svc.unit }}" />
-      <button type="submit"
-              class="bot-toggle service-toggle"
-              aria-checked="{{ 'true' if is_running else 'false' }}"
-              aria-label="{% if is_running %}Stop{% else %}Start{% endif %} {{ svc.label }}"
-              title="{% if is_running %}Stop{% else %}Start{% endif %} {{ svc.label }}">
-        <span class="bot-toggle-knob"></span>
+{% set log_slug = svc.unit | replace('.', '-') %}
+<div class="service-block{% if detail and ac and svc.unit == ac.unit %} service-block-expanded{% endif %}">
+  <div class="watch-item service-row{% if detail and svc.logs %} service-row-has-logs{% endif %}">
+    <span class="service-row-main">
+      {% if ac and svc.unit == ac.unit %}
+      <span class="signal-dot {% if ac.overall == 'ok' %}signal-bull{% elif ac.overall == 'warn' %}signal-bear{% else %}signal-neutral{% endif %}"></span>
+      <strong>{{ svc.label }}</strong>
+      <span class="detail mono">{{ svc.unit }}</span>
+      {% else %}
+      <span class="signal-dot {% if svc.active == 'active' %}signal-bull{% elif svc.active == 'failed' %}signal-bear{% else %}signal-neutral{% endif %}"></span>
+      <strong>{{ svc.label }}</strong>
+      <span class="detail mono">{{ svc.unit }}</span>
+      {% endif %}
+    </span>
+    <span class="service-meta">
+      {% if detail and svc.logs %}
+      <button type="button"
+              class="btn btn-sm service-logs-toggle"
+              data-service-logs-toggle="{{ svc.unit }}"
+              aria-expanded="false"
+              aria-controls="logs-{{ log_slug }}">
+        Show logs
       </button>
-    </form>
-    {% if is_running %}
-    <form class="inline-form"
-          hx-post="/actions/restart-service"
-          hx-target="#actionResult"
-          hx-swap="innerHTML">
-      <input type="hidden" name="unit" value="{{ svc.unit }}" />
-      <button type="submit" class="btn btn-sm">Restart</button>
-    </form>
-    {% endif %}
-    {% endif %}
-  </span>
+      {% endif %}
+      {% if ac and svc.unit == ac.unit %}
+      <span class="tag {% if ac.ready %}would_hold{% elif ac.overall == 'amber' %}would_wait{% elif ac.overall == 'warn' %}would_sell{% else %}no_action{% endif %}">
+        {% if ac.ready %}online{% elif ac.overall == 'amber' %}loading{% else %}stopped{% endif %}
+      </span>
+      {% else %}
+      <span class="tag {% if svc.active == 'active' %}would_hold{% elif svc.active == 'activating' %}would_wait{% elif svc.active == 'failed' %}would_sell{% else %}no_action{% endif %}">{{ svc.active }}</span>
+      {% endif %}
+      {% if controls and svc.manage %}
+      {% set is_running = (ac.systemd_active if (detail and ac and svc.unit == ac.unit) else svc.active) in ('active', 'activating') %}
+      <form class="inline-form service-toggle-form"
+            hx-post="{% if is_running %}/actions/stop-service{% else %}/actions/start-service{% endif %}"
+            hx-target="#actionResult"
+            hx-swap="innerHTML">
+        <input type="hidden" name="unit" value="{{ svc.unit }}" />
+        <button type="submit"
+                class="bot-toggle service-toggle"
+                aria-checked="{{ 'true' if is_running else 'false' }}"
+                aria-label="{% if is_running %}Stop{% else %}Start{% endif %} {{ svc.label }}"
+                title="{% if is_running %}Stop{% else %}Start{% endif %} {{ svc.label }}">
+          <span class="bot-toggle-knob"></span>
+        </button>
+      </form>
+      {% if is_running %}
+      <form class="inline-form"
+            hx-post="/actions/restart-service"
+            hx-target="#actionResult"
+            hx-swap="innerHTML">
+        <input type="hidden" name="unit" value="{{ svc.unit }}" />
+        <button type="submit" class="btn btn-sm">Restart</button>
+      </form>
+      {% endif %}
+      {% endif %}
+    </span>
+  </div>
+  {% if detail and ac and svc.unit == ac.unit %}
+  {% include "partials/azerothcore_components.html" %}
+  {% endif %}
+  {% if detail and svc.logs %}
+  <div id="logs-{{ log_slug }}" class="service-logs-slot"></div>
+  {% endif %}
 </div>
 {% else %}
 <div class="action-log-empty">No services configured — edit config/settings.yaml</div>

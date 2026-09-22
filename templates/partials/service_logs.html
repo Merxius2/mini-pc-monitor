@@ -1,0 +1,38 @@
+<div class="service-logs-panel" data-service-unit="{{ log.unit }}">
+  <div class="service-logs-panel-header">
+    <span class="service-logs-panel-title">Activity log</span>
+    <button type="button"
+            class="btn btn-sm service-logs-collapse"
+            data-service-logs-collapse="{{ log.unit }}"
+            aria-label="Collapse activity log">
+      Collapse
+    </button>
+  </div>
+  {% if log.error %}
+  <div class="service-log-error">{{ log.error }}</div>
+  {% endif %}
+
+  {% if log.badges or log.summary_lines %}
+  <div class="service-log-health">
+    {% for badge in log.badges %}
+    <span class="tag {% if badge.level == 'ok' %}would_hold{% elif badge.level == 'warn' %}would_sell{% elif badge.level == 'amber' %}would_wait{% else %}no_action{% endif %}">
+      {{ badge.label }}
+    </span>
+    {% endfor %}
+    {% for line in log.summary_lines %}
+    <span class="mono">{{ line }}</span>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="service-log-list">
+    {% for entry in log.entries %}
+    <div class="service-log-line">
+      {% if entry.time %}<span class="service-log-time mono">{{ entry.time }}</span>{% endif %}
+      <span class="service-log-msg">{{ entry.message }}</span>
+    </div>
+    {% else %}
+    <div class="action-log-empty">No recent activity</div>
+    {% endfor %}
+  </div>
+</div>

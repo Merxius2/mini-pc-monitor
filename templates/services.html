@@ -13,11 +13,117 @@
     <span class="badge">{{ service_count }} configured</span>
   </div>
   <div id="servicesPanel"
-       hx-get="/partials/services"
-       hx-trigger="load, every 30s, refreshServices from:body"
+       hx-get="/partials/services?detail=1"
+       hx-trigger="load, every 15s, refreshServices from:body"
        hx-swap="innerHTML">
     <div class="services-loading">Loading services…</div>
   </div>
   <div id="actionResult"></div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const STORAGE_KEY = "mini-pc-monitor:service-logs-open";
+
+  function logSlug(unit) {
+    return unit.replace(/\./g, "-");
+  }
+
+  function getOpenLogs() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function saveOpenLogs(units) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(units));
+  }
+
+  function isOpen(unit) {
+    return getOpenLogs().includes(unit);
+  }
+
+  function setOpen(unit, open) {
+    let units = getOpenLogs();
+    if (open) {
+      if (!units.includes(unit)) units.push(unit);
+    } else {
+      units = units.filter((u) => u !== unit);
+    }
+    saveOpenLogs(units);
+  }
+
+  function syncToggleButton(unit) {
+    const btn = document.querySelector('[data-service-logs-toggle="' + unit + '"]');
+    if (!btn) return;
+    const open = isOpen(unit);
+    btn.setAttribute("aria-expanded", open ? "true" : "false");
+    btn.textContent = open ? "Hide logs" : "Show logs";
+    btn.classList.toggle("is-open", open);
+  }
+
+  function syncAllToggleButtons() {
+    document.querySelectorAll("[data-service-logs-toggle]").forEach((btn) => {
+      syncToggleButton(btn.dataset.serviceLogsToggle);
+    });
+  }
+
+  function loadLogs(unit) {
+    const slot = document.getElementById("logs-" + logSlug(unit));
+    if (!slot) return Promise.resolve();
+    return htmx.ajax("GET", "/partials/service-logs?unit=" + encodeURIComponent(unit), {
+      target: slot,
+      swap: "innerHTML",
+    }).then(function () {
+      syncToggleButton(unit);
+    });
+  }
+
+  function collapseLogs(unit) {
+    setOpen(unit, false);
+    const slot = document.getElementById("logs-" + logSlug(unit));
+    if (slot) slot.innerHTML = "";
+    syncToggleButton(unit);
+  }
+
+  function expandLogs(unit) {
+    setOpen(unit, true);
+    return loadLogs(unit);
+  }
+
+  function restoreOpenLogs() {
+    syncAllToggleButtons();
+    const jobs = getOpenLogs().map((unit) => loadLogs(unit));
+    return Promise.all(jobs);
+  }
+
+  document.body.addEventListener("click", function (e) {
+    const toggle = e.target.closest("[data-service-logs-toggle]");
+    if (toggle) {
+      e.preventDefault();
+      const unit = toggle.dataset.serviceLogsToggle;
+      if (isOpen(unit)) collapseLogs(unit);
+      else expandLogs(unit);
+      return;
+    }
+    const collapse = e.target.closest("[data-service-logs-collapse]");
+    if (collapse) {
+      e.preventDefault();
+      collapseLogs(collapse.dataset.serviceLogsCollapse);
+    }
+  });
+
+  document.body.addEventListener("htmx:afterSwap", function (e) {
+    if (e.detail.target.id === "servicesPanel") {
+      restoreOpenLogs();
+    }
+  });
+})();
+</script>
 {% endblock %}

@@ -7,7 +7,9 @@ from datetime import datetime
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
-from src.config_loader import load_settings, manageable_service_units
+from src.azerothcore import get_azerothcore_status
+from src.config_loader import load_settings, loggable_service_units, manageable_service_units
+from src.service_logs import get_service_logs
 from src.metrics import get_host_metrics, get_top_processes
 from src.services import (
     format_uptime,
@@ -109,10 +111,30 @@ def host_metrics_partial(request: Request):
 @router.get("/partials/services", response_class=HTMLResponse)
 def services_partial(request: Request):
     settings = _settings(request)
+    detail = request.query_params.get("detail") == "1"
+    controls = detail
+    ctx: dict = {
+        "services": list_services(settings.services),
+        "detail": detail,
+        "controls": controls,
+        "ac": get_azerothcore_status(settings.azerothcore),
+    }
     return _templates(request).TemplateResponse(
         request,
         "partials/services_list.html",
-        {"services": list_services(settings.services)},
+        ctx,
+    )
+
+
+@router.get("/partials/service-logs", response_class=HTMLResponse)
+def service_logs_partial(request: Request, unit: str):
+    settings = _settings(request)
+    if unit not in loggable_service_units(settings):
+        raise HTTPException(status_code=400, detail="Service logs not enabled")
+    return _templates(request).TemplateResponse(
+        request,
+        "partials/service_logs.html",
+        {"log": get_service_logs(unit, settings)},
     )
 
 

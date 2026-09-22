@@ -1,0 +1,22 @@
+[Unit]
+Description=AzerothCore WoW Private Server
+After=network-online.target mysql.service
+Wants=network-online.target
+Requires=mysql.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=sylvester
+Group=sylvester
+WorkingDirectory=/home/sylvester/azerothcore-wotlk/env/dist/bin
+Environment=HOME=/home/sylvester
+Environment=USER=sylvester
+ExecStart=/home/sylvester/start.sh
+ExecStartPost=-/usr/bin/sudo -n /usr/bin/systemctl start apache2.service
+ExecStop=/usr/local/sbin/azerothcore-stop.sh
+TimeoutStartSec=60
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

@@ -630,6 +630,26 @@
   .tag-buy { background: var(--green-dim); color: var(--green); }
   .tag-sell { background: var(--red-dim); color: var(--red); }
   .tag-hold { background: rgba(139, 149, 168, 0.15); color: var(--muted); }
+
+  .tag.would_hold {
+    background: var(--green-dim);
+    color: var(--green);
+  }
+
+  .tag.would_sell {
+    background: var(--red-dim);
+    color: var(--red);
+  }
+
+  .tag.would_wait {
+    background: var(--amber-dim);
+    color: var(--amber);
+  }
+
+  .tag.no_action {
+    background: rgba(139, 149, 168, 0.15);
+    color: var(--muted);
+  }
   .tag-manual { background: rgba(139, 149, 168, 0.1); color: var(--muted); border: 1px dashed var(--border); }
   .tag-advisor { background: rgba(34, 211, 238, 0.12); color: var(--cyan); font-family: "JetBrains Mono", monospace; font-size: 0.6rem; }
 
@@ -1227,6 +1247,134 @@
     margin-top: 0.65rem;
     font-size: 0.72rem;
     color: var(--muted);
+  }
+
+  .service-block-expanded .service-row {
+    background: var(--surface2);
+  }
+
+  .service-ac-details {
+    padding: 0.65rem 1rem 0.85rem 1.85rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+
+  .service-ac-details.ac-overall-ok {
+    background: linear-gradient(180deg, rgba(34, 197, 94, 0.06), var(--surface2));
+  }
+
+  .service-ac-details.ac-overall-warn {
+    background: linear-gradient(180deg, rgba(239, 68, 68, 0.06), var(--surface2));
+  }
+
+  .service-ac-summary {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-bottom: 0.55rem;
+  }
+
+  .ac-components-inline {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .ac-components-inline .ac-component {
+    padding: 0.35rem 0;
+    border: none;
+    font-size: 0.78rem;
+  }
+
+  .ac-component-main {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.25rem;
+  }
+
+  .ac-component-detail {
+    display: block;
+    font-size: 0.68rem;
+  }
+
+  .service-row-has-logs .service-row-main {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .service-logs-toggle.is-open {
+    color: var(--cyan);
+    border-color: rgba(56, 189, 248, 0.35);
+  }
+
+  .service-logs-slot:not(:empty) {
+    border-bottom: 1px solid var(--border);
+  }
+
+  .service-logs-panel {
+    padding: 0.65rem 1rem 0.85rem 1.85rem;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .service-logs-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.55rem;
+  }
+
+  .service-logs-panel-title {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .service-log-health {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.55rem;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+
+  .service-log-list {
+    max-height: 220px;
+    overflow-y: auto;
+    font-size: 0.75rem;
+  }
+
+  .service-log-line {
+    display: grid;
+    grid-template-columns: 4.5rem 1fr;
+    gap: 0.65rem;
+    padding: 0.3rem 0;
+    border-bottom: 1px solid rgba(42, 51, 71, 0.5);
+  }
+
+  .service-log-line:last-child {
+    border-bottom: none;
+  }
+
+  .service-log-time {
+    color: var(--muted);
+    font-size: 0.68rem;
+  }
+
+  .service-log-msg {
+    color: #b8c0d0;
+    word-break: break-word;
+  }
+
+  .service-log-error {
+    color: var(--amber);
+    font-size: 0.75rem;
+    margin-bottom: 0.5rem;
   }
 
   .service-toggle {

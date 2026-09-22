@@ -1,18 +1,17 @@
 #!/usr/bin/env bash
-# Install AzerothCore systemd units on the mini-PC.
-# Edit paths in the unit files if your AzerothCore install lives elsewhere.
+# Install AzerothCore systemd unit and stop script on the mini-PC.
 
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
-for unit in azerothcore-authserver.service azerothcore-worldserver.service azerothcore.target; do
-  sudo cp "$ROOT/scripts/$unit" "/etc/systemd/system/$unit"
-done
+sudo cp "$ROOT/scripts/azerothcore-stop.sh" /usr/local/sbin/
+sudo chmod 755 /usr/local/sbin/azerothcore-stop.sh
+sudo cp "$ROOT/scripts/azerothcore.service" /etc/systemd/system/azerothcore.service
 
 sudo systemctl daemon-reload
-sudo systemctl enable azerothcore.target
+sudo systemctl enable azerothcore.service
 
-echo "AzerothCore units installed (not started)."
-echo "Start from the dashboard toggle or: sudo systemctl start azerothcore.target"
-systemctl list-unit-files 'azerothcore*' --no-pager
+echo "AzerothCore service installed (not started)."
+echo "Start from the dashboard toggle or: sudo systemctl start azerothcore.service"
+systemctl cat azerothcore.service --no-pager | head -20

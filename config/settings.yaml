@@ -9,17 +9,34 @@ services:
   - unit: good-search-mcp.service
     label: Good-search MCP
     manage: true
+    logs: true
   - unit: ollama.service
     label: Ollama
     manage: true
+    logs: true
   - unit: mini-pc-monitor.service
     label: Mini-PC Monitor
     manage: false
   - unit: azerothcore.service
     label: AzerothCore WoW Server
     manage: true
+    logs: true
 
 top_processes_limit: 8
+
+azerothcore:
+  enabled: true
+  label: AzerothCore WoW Server
+  systemd_unit: azerothcore.service
+  manage: true
+  mysql_unit: mysql.service
+  mysql_port: 3306
+  auth_process: authserver
+  auth_port: 3724
+  world_process: worldserver
+  world_port: 8085
+  auth_tmux_session: auth-session
+  world_tmux_session: world-session
 
 sleep_schedule:
   nightly_off_timer: minipc-nightly-off.timer
