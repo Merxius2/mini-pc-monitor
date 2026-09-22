@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="top-bar">
+  <div>
+    <h2>Services</h2>
+    <p>systemd units on {{ status.hostname }} · restart requires passwordless sudo</p>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-header">
+    Managed services
+    <span class="badge">{{ status.services | length }} configured</span>
+  </div>
+  <div id="servicesPanel"
+       hx-get="/partials/services"
+       hx-trigger="every 30s, refreshServices from:body"
+       hx-swap="innerHTML">
+    {% include "partials/services_list.html" %}
+  </div>
+  <div id="actionResult"></div>
+</div>
+{% endblock %}

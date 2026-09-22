@@ -1,0 +1,10 @@
+[Unit]
+Description=Poll GitHub every 3 min for mini-pc-monitor updates
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=3min
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target

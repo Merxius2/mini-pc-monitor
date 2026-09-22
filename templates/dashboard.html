@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="top-bar">
+  <div>
+    <h2>Dashboard</h2>
+    <p>{{ status.now_str }} · {{ status.hostname }} · uptime {{ status.uptime }}</p>
+  </div>
+</div>
+
+<div class="pnl-grid">
+  <div class="pnl-card highlight">
+    <div class="label">CPU</div>
+    <div class="value">{{ status.host.cpu_percent }}%</div>
+    <div class="sub">{{ status.host.cpu_cores }} cores{% if status.host.load_1m is not none %} · load {{ status.host.load_1m }}{% endif %}</div>
+  </div>
+  <div class="pnl-card highlight">
+    <div class="label">Memory</div>
+    <div class="value">{{ status.host.memory_used_gb }} GB</div>
+    <div class="sub">{{ status.host.memory_percent }}% of {{ status.host.memory_total_gb }} GB</div>
+  </div>
+  <div class="pnl-card highlight">
+    <div class="label">Services active</div>
+    <div class="value">{{ status.services | selectattr('active', 'equalto', 'active') | list | length }} / {{ status.services | length }}</div>
+    <div class="sub">systemd units in config</div>
+  </div>
+</div>
+
+<div class="content-grid">
+  <div class="left-col">
+    <div class="panel">
+      <div class="panel-header">
+        Top processes
+        <span class="badge">by CPU</span>
+      </div>
+      <div id="processesPanel"
+           hx-get="/partials/processes"
+           hx-trigger="every 15s"
+           hx-swap="innerHTML">
+        {% include "partials/processes.html" %}
+      </div>
+    </div>
+  </div>
+  <div class="right-col">
+    <div class="panel">
+      <div class="panel-header">
+        Services
+        <a href="/services" class="hint">Manage →</a>
+      </div>
+      <div id="servicesPanel"
+           hx-get="/partials/services"
+           hx-trigger="every 30s, refreshServices from:body"
+           hx-swap="innerHTML">
+        {% include "partials/services_list.html" %}
+      </div>
+      <div id="actionResult"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}

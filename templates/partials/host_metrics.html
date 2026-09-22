@@ -1,0 +1,52 @@
+<div class="status-section-label">Mini-PC load</div>
+
+<div class="host-metric-card">
+  <div class="host-metric-head">
+    <span><span class="dot {{ host.cpu_level }}"></span>CPU</span>
+    <span class="mono">{{ host.cpu_percent }}%{% if host.load_1m is not none %} · {{ host.load_1m }} load{% endif %}</span>
+  </div>
+  <div class="host-metric-bar">
+    <div class="host-metric-fill cpu {{ host.cpu_level }}" style="width: {{ host.cpu_percent }}%"></div>
+  </div>
+  {% if host.load_percent is not none %}
+  <div class="host-metric-sub">
+    <span>Load / cores</span>
+    <span class="mono">{{ host.load_percent }}%</span>
+  </div>
+  <div class="host-metric-bar thin">
+    <div class="host-metric-fill load {{ host.cpu_level }}" style="width: {{ host.load_percent }}%"></div>
+  </div>
+  {% endif %}
+  {% if host.cpu_sparkline %}
+  <svg class="host-sparkline" viewBox="0 0 200 28" preserveAspectRatio="none" aria-hidden="true">
+    <polyline class="spark-cpu {{ host.cpu_level }}" points="{{ host.cpu_sparkline }}" />
+  </svg>
+  {% endif %}
+</div>
+
+<div class="host-metric-card">
+  <div class="host-metric-head">
+    <span><span class="dot {{ host.memory_level }}"></span>Memory</span>
+    <span class="mono">{{ host.memory_used_gb }} / {{ host.memory_total_gb }} GB</span>
+  </div>
+  <div class="host-metric-bar">
+    <div class="host-metric-fill mem {{ host.memory_level }}" style="width: {{ host.memory_percent }}%"></div>
+  </div>
+  {% if host.mem_sparkline %}
+  <svg class="host-sparkline" viewBox="0 0 200 28" preserveAspectRatio="none" aria-hidden="true">
+    <polyline class="spark-mem {{ host.memory_level }}" points="{{ host.mem_sparkline }}" />
+  </svg>
+  {% endif %}
+</div>
+
+{% if host.ollama_memory_gb %}
+<div class="host-metric-card compact">
+  <div class="host-metric-head">
+    <span><span class="dot ok"></span>Ollama</span>
+    <span class="mono">{{ host.ollama_memory_gb }} GB RAM</span>
+  </div>
+  <div class="host-metric-bar thin">
+    <div class="host-metric-fill ollama ok" style="width: {{ ((host.ollama_memory_gb / host.memory_total_gb) * 100)|round(1) }}%"></div>
+  </div>
+</div>
+{% endif %}

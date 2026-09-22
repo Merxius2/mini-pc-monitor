@@ -1,0 +1,10 @@
+[Unit]
+Description=Deploy mini-pc-monitor when origin/main changed
+Documentation=https://github.com/Merxius2/mini-pc-monitor/blob/main/docs/mini-pc.md
+
+[Service]
+Type=oneshot
+User=sylvester
+Group=sylvester
+WorkingDirectory=/home/sylvester/mini-pc-monitor
+ExecStart=/home/sylvester/mini-pc-monitor/scripts/check-and-deploy.sh

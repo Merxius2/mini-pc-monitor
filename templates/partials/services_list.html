@@ -1,0 +1,23 @@
+{% for svc in services %}
+<div class="watch-item service-row">
+  <span>
+    <span class="signal-dot {% if svc.active == 'active' %}signal-bull{% elif svc.active == 'failed' %}signal-bear{% else %}signal-neutral{% endif %}"></span>
+    <strong>{{ svc.label }}</strong>
+    <span class="detail mono">{{ svc.unit }}</span>
+  </span>
+  <span class="service-meta">
+    <span class="tag {% if svc.active == 'active' %}would_hold{% elif svc.active == 'failed' %}would_sell{% else %}no_action{% endif %}">{{ svc.active }}</span>
+    {% if svc.manage %}
+    <form class="inline-form"
+          hx-post="/actions/restart-service"
+          hx-target="#actionResult"
+          hx-swap="innerHTML">
+      <input type="hidden" name="unit" value="{{ svc.unit }}" />
+      <button type="submit" class="btn btn-sm">Restart</button>
+    </form>
+    {% endif %}
+  </span>
+</div>
+{% else %}
+<div class="action-log-empty">No services configured — edit config/settings.yaml</div>
+{% endfor %}

@@ -1,0 +1,19 @@
+server:
+  host: 0.0.0.0
+  port: 8080
+
+# Friendly label shown in the sidebar (defaults to system hostname)
+hostname_label: null
+
+services:
+  - unit: good-search-mcp.service
+    label: Good-search MCP
+    manage: true
+  - unit: ollama.service
+    label: Ollama
+    manage: true
+  - unit: mini-pc-monitor.service
+    label: Mini-PC Monitor
+    manage: false
+
+top_processes_limit: 8

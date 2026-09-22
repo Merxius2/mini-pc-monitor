@@ -1,0 +1,11 @@
+{% for p in processes %}
+<div class="watch-item process-row">
+  <span>
+    <strong class="mono">{{ p.name }}</strong>
+    <span class="detail">pid {{ p.pid }} · {{ p.user }}</span>
+  </span>
+  <span class="mono">{{ p.cpu_percent }}% CPU · {{ p.memory_percent }}% RAM</span>
+</div>
+{% else %}
+<div class="action-log-empty">No process data</div>
+{% endfor %}
