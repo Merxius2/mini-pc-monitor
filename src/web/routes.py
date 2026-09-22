@@ -17,6 +17,7 @@ from src.services import (
     start_service,
     stop_service,
 )
+from src.sleep_schedule import apply_schedule, get_schedule_status, set_schedule_enabled
 
 router = APIRouter()
 
@@ -29,15 +30,25 @@ def _settings(request: Request):
     return request.app.state.settings
 
 
+def _layout_context(settings) -> dict:
+    host = get_host_metrics(sample_cpu=False, include_ollama=False)
+    return {
+        "hostname": get_hostname_label(settings.hostname_label),
+        "host": host,
+        "uptime": format_uptime(host["uptime_seconds"]),
+        "now_str": datetime.now().strftime("%A %d %b %Y · %H:%M"),
+    }
+
+
 def _status_context(settings) -> dict:
     host = get_host_metrics(sample_cpu=False)
     return {
         "hostname": get_hostname_label(settings.hostname_label),
         "host": host,
         "uptime": format_uptime(host["uptime_seconds"]),
+        "now_str": datetime.now().strftime("%A %d %b %Y · %H:%M"),
         "services": list_services(settings.services),
         "top_processes": get_top_processes(settings.top_processes_limit),
-        "now_str": datetime.now().strftime("%A %d %b %Y · %H:%M"),
     }
 
 
@@ -52,13 +63,35 @@ def dashboard_home(request: Request):
     return _templates(request).TemplateResponse(request, "dashboard.html", ctx)
 
 
+@router.get("/schedule", response_class=HTMLResponse)
+def schedule_page(request: Request):
+    settings = _settings(request)
+    ctx = {
+        "page_title": "Sleep schedule",
+        "active_nav": "schedule",
+        "status": _layout_context(settings),
+    }
+    return _templates(request).TemplateResponse(request, "schedule.html", ctx)
+
+
+@router.get("/partials/sleep-schedule", response_class=HTMLResponse)
+def sleep_schedule_partial(request: Request):
+    settings = _settings(request)
+    return _templates(request).TemplateResponse(
+        request,
+        "partials/sleep_schedule.html",
+        {"schedule": get_schedule_status(settings.sleep_schedule)},
+    )
+
+
 @router.get("/services", response_class=HTMLResponse)
 def services_page(request: Request):
     settings = _settings(request)
     ctx = {
         "page_title": "Services",
         "active_nav": "services",
-        "status": _status_context(settings),
+        "status": _layout_context(settings),
+        "service_count": len(settings.services),
     }
     return _templates(request).TemplateResponse(request, "services.html", ctx)
 
@@ -136,6 +169,44 @@ def action_restart_service(request: Request, unit: str = Form(...)):
     _assert_manageable_unit(request, unit)
     ok, message = restart_service(unit)
     return _service_action_response(request, unit, ok, message)
+
+
+def _schedule_action_response(request: Request, ok: bool, message: str):
+    if request.headers.get("HX-Request"):
+        return _templates(request).TemplateResponse(
+            request,
+            "partials/action_result.html",
+            {"ok": ok, "message": message},
+            headers={"HX-Trigger": "refreshSchedule"},
+        )
+    if not ok:
+        raise HTTPException(status_code=500, detail=message)
+    return RedirectResponse("/schedule", status_code=303)
+
+
+@router.post("/actions/update-sleep-schedule")
+def action_update_sleep_schedule(
+    request: Request,
+    sleep_time: str = Form(...),
+    wake_time: str = Form(...),
+):
+    settings = _settings(request)
+    ok, message = apply_schedule(
+        settings.sleep_schedule,
+        sleep_time=sleep_time,
+        wake_time=wake_time,
+    )
+    return _schedule_action_response(request, ok, message)
+
+
+@router.post("/actions/toggle-sleep-schedule")
+def action_toggle_sleep_schedule(request: Request, enabled: str = Form(...)):
+    settings = _settings(request)
+    ok, message = set_schedule_enabled(
+        settings.sleep_schedule,
+        enabled=enabled == "true",
+    )
+    return _schedule_action_response(request, ok, message)
 
 
 @router.get("/api/health")

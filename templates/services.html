@@ -10,13 +10,13 @@
 <div class="panel">
   <div class="panel-header">
     Managed services
-    <span class="badge">{{ status.services | length }} configured</span>
+    <span class="badge">{{ service_count }} configured</span>
   </div>
   <div id="servicesPanel"
        hx-get="/partials/services"
-       hx-trigger="every 30s, refreshServices from:body"
+       hx-trigger="load, every 30s, refreshServices from:body"
        hx-swap="innerHTML">
-    {% include "partials/services_list.html" %}
+    <div class="services-loading">Loading services…</div>
   </div>
   <div id="actionResult"></div>
 </div>

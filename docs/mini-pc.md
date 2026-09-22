@@ -8,7 +8,9 @@ Runtime target: **192.168.1.30** · user `sylvester` · repo path `~/mini-pc-mon
 |--------------|---------|
 | `mini-pc-monitor.service` | FastAPI dashboard on `0.0.0.0:8080` |
 | `mini-pc-monitor-deploy.timer` | Poll GitHub every 3 min → pull + restart if `main` changed |
-| `azerothcore.target` | AzerothCore WoW server (auth + world) — toggle from dashboard |
+| `azerothcore.service` | AzerothCore WoW server — toggle from dashboard |
+| `minipc-nightly-off.timer` | Suspend at 21:00 — view/edit on dashboard **Sleep schedule** page |
+| `minipc-keep-awake.timer` | Start keep-awake inhibitor at 09:00 |
 
 ## Commands
 

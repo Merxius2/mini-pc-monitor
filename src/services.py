@@ -18,6 +18,38 @@ def _systemctl(*args: str) -> str:
     return (result.stdout or result.stderr or "").strip()
 
 
+def _batch_service_states(units: list[str]) -> dict[str, dict[str, str]]:
+    if not units:
+        return {}
+    result = _run(
+        [
+            "systemctl",
+            "show",
+            *units,
+            "-p",
+            "ActiveState",
+            "-p",
+            "UnitFileState",
+            "--no-pager",
+        ]
+    )
+    blocks = [block.strip() for block in (result.stdout or "").strip().split("\n\n") if block.strip()]
+    states: dict[str, dict[str, str]] = {}
+    for unit, block in zip(units, blocks):
+        props = dict(
+            line.split("=", 1)
+            for line in block.splitlines()
+            if "=" in line
+        )
+        states[unit] = {
+            "active": props.get("ActiveState", "unknown"),
+            "enabled": props.get("UnitFileState", "unknown"),
+        }
+    for unit in units:
+        states.setdefault(unit, {"active": "unknown", "enabled": "unknown"})
+    return states
+
+
 def get_hostname_label(configured: str | None) -> str:
     if configured:
         return configured
@@ -52,12 +84,26 @@ def inspect_service(unit: str) -> dict[str, Any]:
 
 
 def list_services(configs: list[ServiceConfig]) -> list[dict[str, Any]]:
+    if not configs:
+        return []
+    states = _batch_service_states([cfg.unit for cfg in configs])
     rows: list[dict[str, Any]] = []
     for cfg in configs:
-        row = inspect_service(cfg.unit)
-        row["label"] = cfg.label
-        row["manage"] = cfg.manage
-        rows.append(row)
+        state = states[cfg.unit]
+        active = state["active"]
+        level = "ok"
+        if active not in ("active", "activating"):
+            level = "warn" if active in ("inactive", "failed") else "amber"
+        rows.append(
+            {
+                "unit": cfg.unit,
+                "active": active,
+                "enabled": state["enabled"],
+                "level": level,
+                "label": cfg.label,
+                "manage": cfg.manage,
+            }
+        )
     return rows
 
 

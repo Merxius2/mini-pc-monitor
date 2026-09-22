@@ -1,0 +1,10 @@
+[Unit]
+Description=Start daytime keep-awake
+
+[Timer]
+OnCalendar=*-*-* 09:00:00
+Persistent=true
+AccuracySec=1s
+
+[Install]
+WantedBy=timers.target

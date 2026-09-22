@@ -15,8 +15,15 @@ services:
   - unit: mini-pc-monitor.service
     label: Mini-PC Monitor
     manage: false
-  - unit: azerothcore.target
+  - unit: azerothcore.service
     label: AzerothCore WoW Server
     manage: true
 
 top_processes_limit: 8
+
+sleep_schedule:
+  nightly_off_timer: minipc-nightly-off.timer
+  keep_awake_timer: minipc-keep-awake.timer
+  keep_awake_service: minipc-keep-awake.service
+  suspend_script: /usr/local/sbin/minipc-poweroff-until-morning.sh
+  manage: true

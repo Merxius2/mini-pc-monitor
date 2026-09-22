@@ -47,11 +47,11 @@ def sparkline_points(values: list[float], width: int = 200, height: int = 28) ->
     return " ".join(pts)
 
 
-def get_host_metrics(*, sample_cpu: bool = True) -> dict[str, Any]:
+def get_host_metrics(*, sample_cpu: bool = True, include_ollama: bool = True) -> dict[str, Any]:
     mem = psutil.virtual_memory()
     cpu = psutil.cpu_percent(interval=0.1 if sample_cpu else None)
     load = _load_1m()
-    ollama_rss = _ollama_rss_bytes()
+    ollama_rss = _ollama_rss_bytes() if include_ollama else None
 
     cpu_level = "ok"
     if cpu >= 85 or (load is not None and load >= psutil.cpu_count() * 0.9):

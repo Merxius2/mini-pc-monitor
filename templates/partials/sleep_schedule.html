@@ -1,0 +1,75 @@
+<div class="schedule-status-block {% if schedule.phase == 'daytime' %}daytime{% elif schedule.phase == 'nighttime' %}nighttime{% else %}disabled{% endif %}">
+  <div class="schedule-status-indicator">
+    <span class="schedule-pulse"></span>
+  </div>
+  <div class="schedule-status-text">
+    <h4>
+      {% if schedule.phase == 'daytime' %}Daytime — keep awake active
+      {% elif schedule.phase == 'nighttime' %}Night window
+      {% elif schedule.phase == 'disabled' %}Schedule disabled
+      {% else %}Schedule status unknown{% endif %}
+    </h4>
+    <p>
+      {% if schedule.enabled %}
+        Suspends at <strong>{{ schedule.sleep_time }}</strong>, wakes at <strong>{{ schedule.wake_time }}</strong>
+      {% else %}
+        Timers are disabled — the mini-PC will not auto-suspend on schedule
+      {% endif %}
+    </p>
+  </div>
+  {% if schedule.manage %}
+  <form class="inline-form schedule-toggle-form"
+        hx-post="/actions/toggle-sleep-schedule"
+        hx-target="#scheduleActionResult"
+        hx-swap="innerHTML">
+    <input type="hidden" name="enabled" value="{{ 'false' if schedule.enabled else 'true' }}" />
+    <button type="submit"
+            class="bot-toggle service-toggle"
+            aria-checked="{{ 'true' if schedule.enabled else 'false' }}"
+            aria-label="{% if schedule.enabled %}Disable{% else %}Enable{% endif %} sleep schedule"
+            title="{% if schedule.enabled %}Disable{% else %}Enable{% endif %} sleep schedule">
+      <span class="bot-toggle-knob"></span>
+    </button>
+  </form>
+  {% endif %}
+</div>
+
+<div class="schedule-grid">
+  <div class="schedule-card">
+    <div class="label">Next suspend</div>
+    <div class="value mono">{{ schedule.next_sleep }}</div>
+    <div class="sub">{{ schedule.nightly_timer }}</div>
+  </div>
+  <div class="schedule-card">
+    <div class="label">Next wake</div>
+    <div class="value mono">{{ schedule.next_wake }}</div>
+    <div class="sub">{{ schedule.wake_timer }}</div>
+  </div>
+  <div class="schedule-card">
+    <div class="label">Keep-awake inhibitor</div>
+    <div class="value {% if schedule.keep_awake_active %}positive{% else %}negative{% endif %}">
+      {{ 'active' if schedule.keep_awake_active else 'inactive' }}
+    </div>
+    <div class="sub">Blocks idle/lid sleep during the day</div>
+  </div>
+</div>
+
+{% if schedule.manage %}
+<form class="schedule-form"
+      hx-post="/actions/update-sleep-schedule"
+      hx-target="#scheduleActionResult"
+      hx-swap="innerHTML">
+  <div class="schedule-form-row">
+    <label>
+      <span>Sleep time</span>
+      <input type="time" name="sleep_time" value="{{ schedule.sleep_time if schedule.sleep_time != '—' else '21:00' }}" required />
+    </label>
+    <label>
+      <span>Wake time</span>
+      <input type="time" name="wake_time" value="{{ schedule.wake_time if schedule.wake_time != '—' else '09:00' }}" required />
+    </label>
+    <button type="submit" class="btn btn-primary">Save schedule</button>
+  </div>
+  <p class="schedule-form-hint">Updates systemd timer drop-ins and the RTC wake script. Requires passwordless sudo.</p>
+</form>
+{% endif %}

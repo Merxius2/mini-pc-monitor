@@ -1,0 +1,7 @@
+[Unit]
+Description=Suspend mini PC until morning RTC wake
+Documentation=man:rtcwake(8)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/minipc-poweroff-until-morning.sh
