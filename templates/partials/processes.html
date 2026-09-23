@@ -2,10 +2,10 @@
 <div class="watch-item process-row">
   <span>
     <span class="process-name-line">
-      <strong class="mono">{{ p.name }}</strong>
       {% if p.service_label %}
-      <span class="tag tag-service">{{ p.service_label }}</span>
+      <span class="process-service-tag" style="{{ p.service_label_style }}">{{ p.service_label }}</span>
       {% endif %}
+      <strong class="mono">{{ p.name }}</strong>
     </span>
     <span class="detail">pid {{ p.pid }} · {{ p.user }}</span>
   </span>
@@ -14,3 +14,9 @@
 {% else %}
 <div class="action-log-empty">No process data</div>
 {% endfor %}
+{% if processes and processes_meta %}
+<div class="processes-footnote">
+  Top {{ processes | length }} listed above use {{ processes_meta.top_cpu_sum }}% CPU combined.
+  Header shows {{ host_cpu_percent }}% total system usage — the gap is other processes, kernel, and idle time.
+</div>
+{% endif %}

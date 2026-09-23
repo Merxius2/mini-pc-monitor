@@ -13,6 +13,10 @@ from src.web.routes import router
 
 ROOT = Path(__file__).resolve().parents[2]
 TEMPLATES = Jinja2Templates(directory=str(ROOT / "templates"))
+STYLE_PATH = ROOT / "static" / "style.css"
+TEMPLATES.env.globals["static_version"] = (
+    int(STYLE_PATH.stat().st_mtime) if STYLE_PATH.is_file() else 0
+)
 
 
 def create_app() -> FastAPI:

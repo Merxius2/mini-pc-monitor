@@ -4,8 +4,10 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+from src.config_loader import SleepScheduleConfig
 from src.sleep_schedule import (
     _next_occurrence,
+    _nightly_off_service,
     _parse_calendar,
     _phase,
     _read_wake_time,
@@ -42,6 +44,10 @@ class SleepScheduleTests(unittest.TestCase):
             ),
             "daytime",
         )
+
+    def test_nightly_off_service_name(self) -> None:
+        config = SleepScheduleConfig(nightly_off_timer="minipc-nightly-off.timer")
+        self.assertEqual(_nightly_off_service(config), "minipc-nightly-off.service")
 
     def test_read_wake_time_after_shebang(self) -> None:
         with tempfile.NamedTemporaryFile(mode="w", suffix=".sh", delete=False) as handle:

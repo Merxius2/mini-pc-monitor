@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="top-bar">
+  <div>
+    <h2>Mini-PC management</h2>
+    <p>Power control and automatic sleep schedule · {{ status.hostname }}</p>
+  </div>
+</div>
+
+<div class="panel management-panel">
+  <div class="panel-header">
+    Power actions
+    <span class="badge">manual</span>
+  </div>
+  <div class="management-actions">
+    {% if status.schedule.manage %}
+    <form class="inline-form management-sleep-form"
+          hx-post="/actions/suspend-now"
+          hx-target="#managementActionResult"
+          hx-swap="innerHTML"
+          onsubmit="return confirm('Suspend the mini-PC now? It will wake at {{ status.schedule.wake_time }}.');">
+      <button type="submit" class="btn btn-primary">Sleep now</button>
+    </form>
+    <p class="management-action-hint">
+      Suspends immediately with RTC wake at <strong>{{ status.schedule.wake_time }}</strong>.
+      Same behaviour as the nightly timer.
+    </p>
+    {% else %}
+    <p class="management-action-hint">Power management is disabled in config.</p>
+    {% endif %}
+  </div>
+  <div id="managementActionResult"></div>
+</div>
+
+<div class="panel schedule-panel">
+  <div class="panel-header">
+    Sleep schedule
+    <span class="badge">systemd timers</span>
+  </div>
+  <div id="schedulePanel"
+       hx-get="/partials/sleep-schedule"
+       hx-trigger="load, every 30s, refreshSchedule from:body"
+       hx-swap="innerHTML">
+    <div class="services-loading">Loading schedule…</div>
+  </div>
+  <div id="scheduleActionResult"></div>
+</div>
+{% endblock %}

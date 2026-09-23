@@ -249,3 +249,24 @@ def set_schedule_enabled(config: SleepScheduleConfig, enabled: bool) -> tuple[bo
             msg = (start.stderr or start.stdout or "start keep-awake failed").strip()
             return False, msg
     return True, "Sleep schedule enabled"
+
+
+def _nightly_off_service(config: SleepScheduleConfig) -> str:
+    if config.nightly_off_service:
+        return config.nightly_off_service
+    if config.nightly_off_timer.endswith(".timer"):
+        return config.nightly_off_timer[: -len(".timer")] + ".service"
+    return "minipc-nightly-off.service"
+
+
+def suspend_now(config: SleepScheduleConfig) -> tuple[bool, str]:
+    if not config.manage:
+        return False, "Power management disabled in config"
+    _sudo_run(["systemctl", "stop", config.keep_awake_service])
+    service = _nightly_off_service(config)
+    result = _sudo_run(["systemctl", "start", "--no-block", service])
+    if result.returncode != 0:
+        msg = (result.stderr or result.stdout or "suspend failed").strip()
+        return False, msg
+    wake_time = _read_wake_time(Path(config.suspend_script)) or "scheduled wake time"
+    return True, f"Suspending now — RTC wake at {wake_time}"

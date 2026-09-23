@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
@@ -19,7 +20,7 @@ from src.services import (
     start_service,
     stop_service,
 )
-from src.sleep_schedule import apply_schedule, get_schedule_status, set_schedule_enabled
+from src.sleep_schedule import apply_schedule, get_schedule_status, set_schedule_enabled, suspend_now
 
 router = APIRouter()
 
@@ -33,7 +34,7 @@ def _settings(request: Request):
 
 
 def _layout_context(settings) -> dict:
-    host = get_host_metrics(sample_cpu=False, include_ollama=False)
+    host = get_host_metrics(sample_cpu=True, include_ollama=False)
     return {
         "hostname": get_hostname_label(settings.hostname_label),
         "host": host,
@@ -42,18 +43,30 @@ def _layout_context(settings) -> dict:
     }
 
 
+def _processes_context(settings) -> dict[str, Any]:
+    view = get_top_processes(
+        settings.top_processes_limit,
+        process_labels=settings.process_labels,
+    )
+    host = get_host_metrics(sample_cpu=True)
+    return {
+        "processes": view["processes"],
+        "processes_meta": view,
+        "host_cpu_percent": host["cpu_percent"],
+    }
+
+
 def _status_context(settings) -> dict:
-    host = get_host_metrics(sample_cpu=False)
+    host = get_host_metrics(sample_cpu=True)
+    processes = _processes_context(settings)
     return {
         "hostname": get_hostname_label(settings.hostname_label),
         "host": host,
         "uptime": format_uptime(host["uptime_seconds"]),
         "now_str": datetime.now().strftime("%A %d %b %Y · %H:%M"),
         "services": list_services(settings.services),
-        "top_processes": get_top_processes(
-            settings.top_processes_limit,
-            process_labels=settings.process_labels,
-        ),
+        "schedule": get_schedule_status(settings.sleep_schedule),
+        **processes,
     }
 
 
@@ -68,15 +81,22 @@ def dashboard_home(request: Request):
     return _templates(request).TemplateResponse(request, "dashboard.html", ctx)
 
 
-@router.get("/schedule", response_class=HTMLResponse)
-def schedule_page(request: Request):
+@router.get("/management", response_class=HTMLResponse)
+def management_page(request: Request):
     settings = _settings(request)
+    status = _layout_context(settings)
+    status["schedule"] = get_schedule_status(settings.sleep_schedule)
     ctx = {
-        "page_title": "Sleep schedule",
-        "active_nav": "schedule",
-        "status": _layout_context(settings),
+        "page_title": "Mini-PC management",
+        "active_nav": "management",
+        "status": status,
     }
-    return _templates(request).TemplateResponse(request, "schedule.html", ctx)
+    return _templates(request).TemplateResponse(request, "management.html", ctx)
+
+
+@router.get("/schedule", response_class=HTMLResponse)
+def schedule_page_redirect(request: Request):
+    return RedirectResponse("/management", status_code=301)
 
 
 @router.get("/partials/sleep-schedule", response_class=HTMLResponse)
@@ -108,6 +128,21 @@ def host_metrics_partial(request: Request):
         request,
         "partials/host_metrics.html",
         {"host": host},
+    )
+
+
+@router.get("/partials/dashboard-metrics", response_class=HTMLResponse)
+def dashboard_metrics_partial(request: Request):
+    settings = _settings(request)
+    host = get_host_metrics(sample_cpu=True)
+    return _templates(request).TemplateResponse(
+        request,
+        "partials/dashboard_metrics.html",
+        {
+            "host": host,
+            "services": list_services(settings.services),
+            "hostname": get_hostname_label(settings.hostname_label),
+        },
     )
 
 
@@ -147,12 +182,7 @@ def processes_partial(request: Request):
     return _templates(request).TemplateResponse(
         request,
         "partials/processes.html",
-        {
-            "processes": get_top_processes(
-                settings.top_processes_limit,
-                process_labels=settings.process_labels,
-            )
-        },
+        _processes_context(settings),
     )
 
 
@@ -211,7 +241,7 @@ def _schedule_action_response(request: Request, ok: bool, message: str):
         )
     if not ok:
         raise HTTPException(status_code=500, detail=message)
-    return RedirectResponse("/schedule", status_code=303)
+    return RedirectResponse("/management", status_code=303)
 
 
 @router.post("/actions/update-sleep-schedule")
@@ -237,6 +267,25 @@ def action_toggle_sleep_schedule(request: Request, enabled: str = Form(...)):
         enabled=enabled == "true",
     )
     return _schedule_action_response(request, ok, message)
+
+
+def _power_action_response(request: Request, ok: bool, message: str):
+    if request.headers.get("HX-Request"):
+        return _templates(request).TemplateResponse(
+            request,
+            "partials/action_result.html",
+            {"ok": ok, "message": message},
+        )
+    if not ok:
+        raise HTTPException(status_code=500, detail=message)
+    return RedirectResponse("/", status_code=303)
+
+
+@router.post("/actions/suspend-now")
+def action_suspend_now(request: Request):
+    settings = _settings(request)
+    ok, message = suspend_now(settings.sleep_schedule)
+    return _power_action_response(request, ok, message)
 
 
 @router.get("/api/health")

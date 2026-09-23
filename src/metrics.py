@@ -8,7 +8,7 @@ from typing import Any
 
 import psutil
 
-from src.config_loader import ProcessLabelRule, service_label_for_process
+from src.config_loader import ProcessLabelRule, service_match_for_process
 
 _HISTORY: deque[dict[str, float]] = deque(maxlen=24)
 
@@ -98,12 +98,19 @@ def get_host_metrics(*, sample_cpu: bool = True, include_ollama: bool = True) ->
     }
 
 
+def normalize_process_cpu(raw_cpu: float, *, cores: int | None = None) -> float:
+    """Convert psutil per-core process CPU to system-wide % (0-100 scale)."""
+    cpu_cores = cores or psutil.cpu_count() or 1
+    return round(raw_cpu / cpu_cores, 1)
+
+
 def get_top_processes(
     limit: int = 8,
     *,
     process_labels: list[ProcessLabelRule] | None = None,
-) -> list[dict[str, Any]]:
-    psutil.cpu_percent(interval=0.05)
+) -> dict[str, Any]:
+    cores = psutil.cpu_count() or 1
+    psutil.cpu_percent(interval=0.1)
     rules = process_labels or []
     rows: list[dict[str, Any]] = []
     for proc in psutil.process_iter(["pid", "name", "username"]):
@@ -113,15 +120,23 @@ def get_top_processes(
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             continue
         name = proc.info.get("name") or "?"
+        match = service_match_for_process(name, rules)
         rows.append(
             {
                 "pid": proc.pid,
                 "name": name,
                 "user": proc.info.get("username") or "?",
-                "cpu_percent": round(cpu, 1),
+                "cpu_percent": normalize_process_cpu(cpu, cores=cores),
                 "memory_percent": round(mem, 1),
-                "service_label": service_label_for_process(name, rules),
+                "service_label": match["label"] if match else None,
+                "service_color": match["color"] if match else None,
+                "service_label_style": match["style"] if match else None,
             }
         )
     rows.sort(key=lambda r: (r["cpu_percent"], r["memory_percent"]), reverse=True)
-    return rows[:limit]
+    top = rows[:limit]
+    return {
+        "processes": top,
+        "cpu_cores": cores,
+        "top_cpu_sum": round(sum(row["cpu_percent"] for row in top), 1),
+    }

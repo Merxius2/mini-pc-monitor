@@ -41,15 +41,51 @@ class AzerothCoreConfig:
     world_tmux_session: str = "world-session"
 
 
+PROCESS_SERVICE_COLORS: dict[str, dict[str, str]] = {
+    "cyan": {
+        "fg": "#22d3ee",
+        "bg": "rgba(34, 211, 238, 0.18)",
+        "border": "rgba(34, 211, 238, 0.45)",
+    },
+    "amber": {
+        "fg": "#f59e0b",
+        "bg": "rgba(245, 158, 11, 0.18)",
+        "border": "rgba(245, 158, 11, 0.45)",
+    },
+    "green": {
+        "fg": "#22c55e",
+        "bg": "rgba(34, 197, 94, 0.18)",
+        "border": "rgba(34, 197, 94, 0.45)",
+    },
+    "purple": {
+        "fg": "#a78bfa",
+        "bg": "rgba(167, 139, 250, 0.18)",
+        "border": "rgba(167, 139, 250, 0.45)",
+    },
+    "blue": {
+        "fg": "#3b82f6",
+        "bg": "rgba(59, 130, 246, 0.18)",
+        "border": "rgba(59, 130, 246, 0.45)",
+    },
+    "red": {
+        "fg": "#ef4444",
+        "bg": "rgba(239, 68, 68, 0.18)",
+        "border": "rgba(239, 68, 68, 0.45)",
+    },
+}
+
+
 @dataclass
 class ProcessLabelRule:
     label: str
     patterns: list[str] = field(default_factory=list)
+    color: str = "cyan"
 
 
 @dataclass
 class SleepScheduleConfig:
     nightly_off_timer: str = "minipc-nightly-off.timer"
+    nightly_off_service: str = "minipc-nightly-off.service"
     keep_awake_timer: str = "minipc-keep-awake.timer"
     keep_awake_service: str = "minipc-keep-awake.service"
     suspend_script: str = "/usr/local/sbin/minipc-poweroff-until-morning.sh"
@@ -97,9 +133,22 @@ def loggable_service_units(settings: Settings) -> set[str]:
     return {s.unit for s in settings.services if s.logs}
 
 
-def service_label_for_process(name: str, rules: list[ProcessLabelRule]) -> str | None:
+def process_service_style(color: str) -> str:
+    palette = PROCESS_SERVICE_COLORS.get(color, PROCESS_SERVICE_COLORS["cyan"])
+    return (
+        f"color: {palette['fg']}; "
+        f"background-color: {palette['bg']}; "
+        f"border: 1px solid {palette['border']};"
+    )
+
+
+def service_match_for_process(name: str, rules: list[ProcessLabelRule]) -> dict[str, str] | None:
     lower = name.lower()
     for rule in rules:
         if any(pattern.lower() in lower for pattern in rule.patterns):
-            return rule.label
+            return {
+                "label": rule.label,
+                "color": rule.color,
+                "style": process_service_style(rule.color),
+            }
     return None

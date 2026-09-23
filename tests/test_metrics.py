@@ -1,6 +1,6 @@
 import unittest
 
-from src.metrics import get_host_metrics, sparkline_points
+from src.metrics import get_host_metrics, normalize_process_cpu, sparkline_points
 
 
 class HostMetricsTests(unittest.TestCase):
@@ -15,6 +15,10 @@ class HostMetricsTests(unittest.TestCase):
         pts = sparkline_points([10.0, 20.0, 15.0, 30.0])
         self.assertIn(",", pts)
         self.assertEqual("", sparkline_points([1.0]))
+
+    def test_normalize_process_cpu(self) -> None:
+        self.assertEqual(normalize_process_cpu(40.0, cores=4), 10.0)
+        self.assertEqual(normalize_process_cpu(100.0, cores=1), 100.0)
 
 
 if __name__ == "__main__":

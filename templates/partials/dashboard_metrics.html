@@ -1,0 +1,24 @@
+<div class="pnl-grid">
+  <div class="pnl-card highlight">
+    <div class="label">CPU usage</div>
+    <div class="value">{{ host.cpu_percent }}%</div>
+    <div class="sub">
+      {{ host.cpu_cores }} cores
+      {% if host.load_1m is not none %} · load {{ host.load_1m }}{% endif %}
+      {% if host.load_percent is not none %} · {{ host.load_percent }}% of capacity{% endif %}
+    </div>
+  </div>
+  <div class="pnl-card highlight">
+    <div class="label">Memory</div>
+    <div class="value">{{ host.memory_used_gb }} GB</div>
+    <div class="sub">{{ host.memory_percent }}% of {{ host.memory_total_gb }} GB</div>
+  </div>
+  <div class="pnl-card highlight">
+    <div class="label">Services active</div>
+    <div class="value">{{ services | selectattr('active', 'equalto', 'active') | list | length }} / {{ services | length }}</div>
+    <div class="sub">systemd units in config</div>
+  </div>
+</div>
+<div id="liveBanner" hx-swap-oob="innerHTML">
+  ● Live — {{ hostname }} · CPU {{ host.cpu_percent }}% · RAM {{ host.memory_percent }}%
+</div>

@@ -1,0 +1,9 @@
+{% if schedule.manage %}
+<form class="inline-form dashboard-sleep-form"
+      hx-post="/actions/suspend-now"
+      hx-target="#dashboardActionResult"
+      hx-swap="innerHTML"
+      onsubmit="return confirm('Suspend the mini-PC now? It will wake at {{ schedule.wake_time }}.');">
+  <button type="submit" class="btn btn-primary">Sleep now</button>
+</form>
+{% endif %}

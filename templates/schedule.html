@@ -1,23 +1,2 @@
-{% extends "base.html" %}
-{% block main %}
-<div class="top-bar">
-  <div>
-    <h2>Sleep schedule</h2>
-    <p>Automatic suspend overnight and keep-awake during the day · {{ status.hostname }}</p>
-  </div>
-</div>
-
-<div class="panel schedule-panel">
-  <div class="panel-header">
-    Power schedule
-    <span class="badge">systemd timers</span>
-  </div>
-  <div id="schedulePanel"
-       hx-get="/partials/sleep-schedule"
-       hx-trigger="load, every 30s, refreshSchedule from:body"
-       hx-swap="innerHTML">
-    <div class="services-loading">Loading schedule…</div>
-  </div>
-  <div id="scheduleActionResult"></div>
-</div>
-{% endblock %}
+{# Legacy route — content lives on /management #}
+{% extends "management.html" %}

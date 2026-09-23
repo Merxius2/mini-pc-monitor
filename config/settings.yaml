@@ -27,11 +27,17 @@ top_processes_limit: 8
 
 process_labels:
   - label: Good-search MCP
+    color: cyan
     patterns: [chrome, chromium, tailscale, tailscaled]
   - label: AzerothCore
+    color: amber
     patterns: [worldserver, authserver, mysqld, mysql]
   - label: Ollama
+    color: green
     patterns: [ollama]
+  - label: Mini-PC Monitor
+    color: purple
+    patterns: [uvicorn]
 
 azerothcore:
   enabled: true
@@ -49,6 +55,7 @@ azerothcore:
 
 sleep_schedule:
   nightly_off_timer: minipc-nightly-off.timer
+  nightly_off_service: minipc-nightly-off.service
   keep_awake_timer: minipc-keep-awake.timer
   keep_awake_service: minipc-keep-awake.service
   suspend_script: /usr/local/sbin/minipc-poweroff-until-morning.sh
