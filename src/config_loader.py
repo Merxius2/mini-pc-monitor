@@ -42,6 +42,12 @@ class AzerothCoreConfig:
 
 
 @dataclass
+class ProcessLabelRule:
+    label: str
+    patterns: list[str] = field(default_factory=list)
+
+
+@dataclass
 class SleepScheduleConfig:
     nightly_off_timer: str = "minipc-nightly-off.timer"
     keep_awake_timer: str = "minipc-keep-awake.timer"
@@ -56,6 +62,7 @@ class Settings:
     hostname_label: str | None = None
     services: list[ServiceConfig] = field(default_factory=list)
     top_processes_limit: int = 8
+    process_labels: list[ProcessLabelRule] = field(default_factory=list)
     sleep_schedule: SleepScheduleConfig = field(default_factory=SleepScheduleConfig)
     azerothcore: AzerothCoreConfig = field(default_factory=AzerothCoreConfig)
 
@@ -66,11 +73,13 @@ def load_settings(path: Path | None = None) -> Settings:
     services = [ServiceConfig(**s) for s in data.get("services", [])]
     sleep_schedule = SleepScheduleConfig(**data.get("sleep_schedule", {}))
     azerothcore = AzerothCoreConfig(**data.get("azerothcore", {}))
+    process_labels = [ProcessLabelRule(**r) for r in data.get("process_labels", [])]
     return Settings(
         server=ServerConfig(**data.get("server", {})),
         hostname_label=data.get("hostname_label"),
         services=services,
         top_processes_limit=int(data.get("top_processes_limit", 8)),
+        process_labels=process_labels,
         sleep_schedule=sleep_schedule,
         azerothcore=azerothcore,
     )
@@ -86,3 +95,11 @@ def manageable_service_units(settings: Settings) -> set[str]:
 
 def loggable_service_units(settings: Settings) -> set[str]:
     return {s.unit for s in settings.services if s.logs}
+
+
+def service_label_for_process(name: str, rules: list[ProcessLabelRule]) -> str | None:
+    lower = name.lower()
+    for rule in rules:
+        if any(pattern.lower() in lower for pattern in rule.patterns):
+            return rule.label
+    return None

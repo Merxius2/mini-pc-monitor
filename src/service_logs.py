@@ -57,10 +57,12 @@ def _tmux_entries(session: str, *, lines: int = 12, prefix: str) -> list[dict[st
         if not text or text.startswith("sylvester@"):
             continue
         rows.append({"time": "", "message": f"[{prefix}] {text}"})
-    return rows[-lines:]
+    captured = rows[-lines:]
+    captured.reverse()
+    return captured
 
 
-def _journal_entries(unit: str, *, lines: int = 25) -> tuple[list[dict[str, str]], str | None]:
+def _journal_entries(unit: str, *, lines: int = 40) -> tuple[list[dict[str, str]], str | None]:
     result = _run(
         [
             "journalctl",
@@ -81,7 +83,20 @@ def _journal_entries(unit: str, *, lines: int = 25) -> tuple[list[dict[str, str]
         for line in (result.stdout or "").splitlines()
         if line.strip()
     ]
+    entries.reverse()
     return entries, None
+
+
+def _systemd_summary(unit: str) -> tuple[list[dict[str, str]], list[str]]:
+    result = _run(["systemctl", "is-active", unit])
+    active = (result.stdout or "").strip()
+    if active == "active":
+        badge = {"label": "running", "level": "ok"}
+    elif active in ("activating", "reloading"):
+        badge = {"label": active, "level": "amber"}
+    else:
+        badge = {"label": active or "unknown", "level": "warn"}
+    return [badge], [f"systemd: {active}"]
 
 
 def _good_search_summary() -> tuple[list[dict[str, str]], list[str]]:
@@ -134,7 +149,7 @@ def _azerothcore_summary(config: AzerothCoreConfig) -> tuple[list[dict[str, str]
     return [badge], lines
 
 
-def get_service_logs(unit: str, settings: Settings, *, lines: int = 25) -> dict[str, Any]:
+def get_service_logs(unit: str, settings: Settings, *, lines: int = 40) -> dict[str, Any]:
     badges: list[dict[str, str]] = []
     summary_lines: list[str] = []
     entries: list[dict[str, str]] = []
@@ -148,11 +163,15 @@ def get_service_logs(unit: str, settings: Settings, *, lines: int = 25) -> dict[
         entries, error = _journal_entries(unit, lines=lines)
     elif unit == settings.azerothcore.systemd_unit:
         badges, summary_lines = _azerothcore_summary(settings.azerothcore)
-        journal, error = _journal_entries(unit, lines=10)
+        journal, error = _journal_entries(unit, lines=lines)
         entries.extend(_tmux_entries(settings.azerothcore.auth_tmux_session, prefix="auth"))
         entries.extend(_tmux_entries(settings.azerothcore.world_tmux_session, prefix="world"))
         entries.extend(journal)
+    elif unit == "mini-pc-monitor.service":
+        badges, summary_lines = _systemd_summary(unit)
+        entries, error = _journal_entries(unit, lines=lines)
     else:
+        badges, summary_lines = _systemd_summary(unit)
         entries, error = _journal_entries(unit, lines=lines)
 
     return {

@@ -17,12 +17,21 @@ services:
   - unit: mini-pc-monitor.service
     label: Mini-PC Monitor
     manage: false
+    logs: true
   - unit: azerothcore.service
     label: AzerothCore WoW Server
     manage: true
     logs: true
 
 top_processes_limit: 8
+
+process_labels:
+  - label: Good-search MCP
+    patterns: [chrome, chromium, tailscale, tailscaled]
+  - label: AzerothCore
+    patterns: [worldserver, authserver, mysqld, mysql]
+  - label: Ollama
+    patterns: [ollama]
 
 azerothcore:
   enabled: true

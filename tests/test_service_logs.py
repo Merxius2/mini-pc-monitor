@@ -1,6 +1,6 @@
 import unittest
 
-from src.service_logs import parse_journal_line
+from src.service_logs import _journal_entries, parse_journal_line
 
 
 class ServiceLogsTests(unittest.TestCase):
@@ -19,6 +19,24 @@ class ServiceLogsTests(unittest.TestCase):
         self.assertEqual(parsed["time"], "19:03:45")
         self.assertIn("GET /api/tags", parsed["message"])
         self.assertIn("200", parsed["message"])
+
+    def test_journal_entries_newest_first(self) -> None:
+        from unittest.mock import patch
+
+        fake_output = "\n".join(
+            [
+                "2026-09-22T12:00:01+0200 host svc[1]: first",
+                "2026-09-22T12:00:02+0200 host svc[1]: second",
+                "2026-09-22T12:00:03+0200 host svc[1]: third",
+            ]
+        )
+        with patch("src.service_logs._run") as run:
+            run.return_value.returncode = 0
+            run.return_value.stdout = fake_output
+            entries, error = _journal_entries("example.service", lines=3)
+        self.assertIsNone(error)
+        self.assertEqual(entries[0]["message"], "third")
+        self.assertEqual(entries[-1]["message"], "first")
 
 
 if __name__ == "__main__":

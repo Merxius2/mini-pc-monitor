@@ -1074,6 +1074,21 @@
     margin-top: 0.15rem;
   }
 
+  .process-name-line {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+  }
+
+  .tag.tag-service {
+    background: rgba(34, 211, 238, 0.1);
+    color: var(--cyan);
+    font-size: 0.58rem;
+    padding: 0.1rem 0.4rem;
+    font-weight: 500;
+  }
+
   .service-meta {
     display: flex;
     align-items: center;

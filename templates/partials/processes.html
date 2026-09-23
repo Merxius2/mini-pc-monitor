@@ -1,7 +1,12 @@
 {% for p in processes %}
 <div class="watch-item process-row">
   <span>
-    <strong class="mono">{{ p.name }}</strong>
+    <span class="process-name-line">
+      <strong class="mono">{{ p.name }}</strong>
+      {% if p.service_label %}
+      <span class="tag tag-service">{{ p.service_label }}</span>
+      {% endif %}
+    </span>
     <span class="detail">pid {{ p.pid }} · {{ p.user }}</span>
   </span>
   <span class="mono">{{ p.cpu_percent }}% CPU · {{ p.memory_percent }}% RAM</span>

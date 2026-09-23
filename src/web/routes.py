@@ -50,7 +50,10 @@ def _status_context(settings) -> dict:
         "uptime": format_uptime(host["uptime_seconds"]),
         "now_str": datetime.now().strftime("%A %d %b %Y · %H:%M"),
         "services": list_services(settings.services),
-        "top_processes": get_top_processes(settings.top_processes_limit),
+        "top_processes": get_top_processes(
+            settings.top_processes_limit,
+            process_labels=settings.process_labels,
+        ),
     }
 
 
@@ -144,7 +147,12 @@ def processes_partial(request: Request):
     return _templates(request).TemplateResponse(
         request,
         "partials/processes.html",
-        {"processes": get_top_processes(settings.top_processes_limit)},
+        {
+            "processes": get_top_processes(
+                settings.top_processes_limit,
+                process_labels=settings.process_labels,
+            )
+        },
     )
 
 

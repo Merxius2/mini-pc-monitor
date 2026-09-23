@@ -1,11 +1,14 @@
+import tempfile
 import unittest
 from datetime import datetime
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from src.sleep_schedule import (
     _next_occurrence,
     _parse_calendar,
     _phase,
+    _read_wake_time,
     validate_time,
 )
 
@@ -39,6 +42,15 @@ class SleepScheduleTests(unittest.TestCase):
             ),
             "daytime",
         )
+
+    def test_read_wake_time_after_shebang(self) -> None:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".sh", delete=False) as handle:
+            handle.write('#!/bin/bash\nset -euo pipefail\nWAKE="09:00"\n')
+            path = Path(handle.name)
+        try:
+            self.assertEqual(_read_wake_time(path), "09:00")
+        finally:
+            path.unlink()
 
 
 if __name__ == "__main__":

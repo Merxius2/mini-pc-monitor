@@ -8,6 +8,8 @@ from typing import Any
 
 import psutil
 
+from src.config_loader import ProcessLabelRule, service_label_for_process
+
 _HISTORY: deque[dict[str, float]] = deque(maxlen=24)
 
 
@@ -96,8 +98,13 @@ def get_host_metrics(*, sample_cpu: bool = True, include_ollama: bool = True) ->
     }
 
 
-def get_top_processes(limit: int = 8) -> list[dict[str, Any]]:
+def get_top_processes(
+    limit: int = 8,
+    *,
+    process_labels: list[ProcessLabelRule] | None = None,
+) -> list[dict[str, Any]]:
     psutil.cpu_percent(interval=0.05)
+    rules = process_labels or []
     rows: list[dict[str, Any]] = []
     for proc in psutil.process_iter(["pid", "name", "username"]):
         try:
@@ -105,13 +112,15 @@ def get_top_processes(limit: int = 8) -> list[dict[str, Any]]:
             mem = proc.memory_percent()
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             continue
+        name = proc.info.get("name") or "?"
         rows.append(
             {
                 "pid": proc.pid,
-                "name": proc.info.get("name") or "?",
+                "name": name,
                 "user": proc.info.get("username") or "?",
                 "cpu_percent": round(cpu, 1),
                 "memory_percent": round(mem, 1),
+                "service_label": service_label_for_process(name, rules),
             }
         )
     rows.sort(key=lambda r: (r["cpu_percent"], r["memory_percent"]), reverse=True)
