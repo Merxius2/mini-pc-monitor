@@ -103,6 +103,7 @@ def list_services(configs: list[ServiceConfig]) -> list[dict[str, Any]]:
                 "label": cfg.label,
                 "manage": cfg.manage,
                 "logs": cfg.logs,
+                "dashboard_url": cfg.dashboard_url,
             }
         )
     return rows

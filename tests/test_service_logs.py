@@ -1,6 +1,7 @@
 import unittest
 
-from src.service_logs import _journal_entries, parse_journal_line
+from src.config_loader import PricewatchConfig
+from src.service_logs import _journal_entries, _pricewatch_summary, parse_journal_line
 
 
 class ServiceLogsTests(unittest.TestCase):
@@ -19,6 +20,22 @@ class ServiceLogsTests(unittest.TestCase):
         self.assertEqual(parsed["time"], "19:03:45")
         self.assertIn("GET /api/tags", parsed["message"])
         self.assertIn("200", parsed["message"])
+
+    def test_pricewatch_summary(self) -> None:
+        from unittest.mock import patch
+
+        config = PricewatchConfig(
+            health_url="http://127.0.0.1:8081/health",
+            stats_url="http://127.0.0.1:8081/api/stats",
+        )
+        with patch("src.service_logs._fetch_json") as fetch:
+            fetch.side_effect = [
+                {"status": "ok", "model": "llama3.2", "good_search": {"reachable": True}},
+                {"total_items": 5, "enabled_items": 4, "alerts_active": 1},
+            ]
+            badges, lines = _pricewatch_summary(config)
+        self.assertEqual(badges[0]["label"], "healthy")
+        self.assertTrue(any("4/5 items" in line for line in lines))
 
     def test_journal_entries_newest_first(self) -> None:
         from unittest.mock import patch

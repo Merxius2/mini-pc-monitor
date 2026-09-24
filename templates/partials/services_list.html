@@ -23,6 +23,9 @@
         Show logs
       </button>
       {% endif %}
+      {% if detail and svc.dashboard_url and svc.active == 'active' %}
+      <a href="{{ svc.dashboard_url }}" class="btn btn-sm" target="_blank" rel="noopener">Open dashboard</a>
+      {% endif %}
       {% if ac and svc.unit == ac.unit %}
       <span class="tag {% if ac.ready %}would_hold{% elif ac.overall == 'amber' %}would_wait{% elif ac.overall == 'warn' %}would_sell{% else %}no_action{% endif %}">
         {% if ac.ready %}online{% elif ac.overall == 'amber' %}loading{% else %}stopped{% endif %}

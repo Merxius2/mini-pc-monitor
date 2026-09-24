@@ -9,7 +9,7 @@ import urllib.error
 import urllib.request
 from typing import Any
 
-from src.config_loader import AzerothCoreConfig, Settings
+from src.config_loader import AzerothCoreConfig, PricewatchConfig, Settings
 
 _JOURNAL_LINE = re.compile(
     r"^(?P<time>\S+)\s+\S+\s+(?P<unit>\S+?)(?:\[\d+\])?:\s*(?P<message>.*)$"
@@ -129,6 +129,33 @@ def _ollama_summary() -> tuple[list[dict[str, str]], list[str]]:
     return [badge], [detail]
 
 
+def _pricewatch_summary(config: PricewatchConfig) -> tuple[list[dict[str, str]], list[str]]:
+    health = _fetch_json(config.health_url)
+    stats = _fetch_json(config.stats_url)
+    if health is None and stats is None:
+        return [{"label": "unreachable", "level": "warn"}], []
+
+    level = "ok" if health and health.get("status") == "ok" else "warn"
+    label = "healthy" if level == "ok" else "unhealthy"
+    lines: list[str] = []
+    if stats:
+        lines.append(
+            f"{stats.get('enabled_items', 0)}/{stats.get('total_items', 0)} items tracked · "
+            f"{stats.get('alerts_active', 0)} alert(s)"
+        )
+        if stats.get("pending_match_reviews"):
+            lines.append(f"{stats['pending_match_reviews']} match review(s) pending")
+    if health:
+        gs = health.get("good_search") or {}
+        if gs.get("reachable"):
+            lines.append(f"Good-search MCP connected · model {health.get('model', '?')}")
+        elif gs.get("error"):
+            lines.append(f"Good-search: {gs['error']}")
+        else:
+            lines.append(f"Ollama model {health.get('model', '?')}")
+    return [{"label": label, "level": level}], lines
+
+
 def _azerothcore_summary(config: AzerothCoreConfig) -> tuple[list[dict[str, str]], list[str]]:
     from src.azerothcore import get_azerothcore_status
 
@@ -157,6 +184,9 @@ def get_service_logs(unit: str, settings: Settings, *, lines: int = 40) -> dict[
 
     if unit == "good-search-mcp.service":
         badges, summary_lines = _good_search_summary()
+        entries, error = _journal_entries(unit, lines=lines)
+    elif unit == settings.pricewatch.systemd_unit:
+        badges, summary_lines = _pricewatch_summary(settings.pricewatch)
         entries, error = _journal_entries(unit, lines=lines)
     elif unit == "ollama.service":
         badges, summary_lines = _ollama_summary()

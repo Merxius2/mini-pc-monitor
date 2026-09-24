@@ -10,6 +10,11 @@ services:
     label: Good-search MCP
     manage: true
     logs: true
+  - unit: pricewatch.service
+    label: Pricewatch
+    manage: true
+    logs: true
+    dashboard_url: http://192.168.1.30:8081/
   - unit: ollama.service
     label: Ollama
     manage: true
@@ -38,6 +43,19 @@ process_labels:
   - label: Mini-PC Monitor
     color: purple
     patterns: [uvicorn]
+    users: [sylvester]
+  - label: Pricewatch
+    color: blue
+    patterns: [uvicorn]
+    users: [pricewatch]
+
+pricewatch:
+  enabled: true
+  systemd_unit: pricewatch.service
+  # Mini-PC Monitor uses 8080; Pricewatch defaults to 8081 when co-installed
+  health_url: http://127.0.0.1:8081/health
+  stats_url: http://127.0.0.1:8081/api/stats
+  dashboard_url: http://192.168.1.30:8081/
 
 azerothcore:
   enabled: true

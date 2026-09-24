@@ -23,6 +23,7 @@ class ServiceConfig:
     label: str
     manage: bool = False
     logs: bool = False
+    dashboard_url: str | None = None
 
 
 @dataclass
@@ -80,6 +81,16 @@ class ProcessLabelRule:
     label: str
     patterns: list[str] = field(default_factory=list)
     color: str = "cyan"
+    users: list[str] = field(default_factory=list)
+
+
+@dataclass
+class PricewatchConfig:
+    enabled: bool = True
+    systemd_unit: str = "pricewatch.service"
+    health_url: str = "http://127.0.0.1:8081/health"
+    stats_url: str = "http://127.0.0.1:8081/api/stats"
+    dashboard_url: str = "http://192.168.1.30:8081/"
 
 
 @dataclass
@@ -101,6 +112,7 @@ class Settings:
     process_labels: list[ProcessLabelRule] = field(default_factory=list)
     sleep_schedule: SleepScheduleConfig = field(default_factory=SleepScheduleConfig)
     azerothcore: AzerothCoreConfig = field(default_factory=AzerothCoreConfig)
+    pricewatch: PricewatchConfig = field(default_factory=PricewatchConfig)
 
 
 def load_settings(path: Path | None = None) -> Settings:
@@ -109,6 +121,7 @@ def load_settings(path: Path | None = None) -> Settings:
     services = [ServiceConfig(**s) for s in data.get("services", [])]
     sleep_schedule = SleepScheduleConfig(**data.get("sleep_schedule", {}))
     azerothcore = AzerothCoreConfig(**data.get("azerothcore", {}))
+    pricewatch = PricewatchConfig(**data.get("pricewatch", {}))
     process_labels = [ProcessLabelRule(**r) for r in data.get("process_labels", [])]
     return Settings(
         server=ServerConfig(**data.get("server", {})),
@@ -118,6 +131,7 @@ def load_settings(path: Path | None = None) -> Settings:
         process_labels=process_labels,
         sleep_schedule=sleep_schedule,
         azerothcore=azerothcore,
+        pricewatch=pricewatch,
     )
 
 
@@ -142,9 +156,16 @@ def process_service_style(color: str) -> str:
     )
 
 
-def service_match_for_process(name: str, rules: list[ProcessLabelRule]) -> dict[str, str] | None:
+def service_match_for_process(
+    name: str,
+    rules: list[ProcessLabelRule],
+    *,
+    username: str | None = None,
+) -> dict[str, str] | None:
     lower = name.lower()
     for rule in rules:
+        if rule.users and (not username or username not in rule.users):
+            continue
         if any(pattern.lower() in lower for pattern in rule.patterns):
             return {
                 "label": rule.label,

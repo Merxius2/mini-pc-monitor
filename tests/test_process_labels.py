@@ -9,7 +9,8 @@ class ProcessLabelTests(unittest.TestCase):
             ProcessLabelRule(label="Good-search MCP", color="cyan", patterns=["chrome", "tailscale"]),
             ProcessLabelRule(label="AzerothCore", color="amber", patterns=["worldserver", "mysqld"]),
             ProcessLabelRule(label="Ollama", color="green", patterns=["ollama"]),
-            ProcessLabelRule(label="Mini-PC Monitor", color="purple", patterns=["uvicorn"]),
+            ProcessLabelRule(label="Mini-PC Monitor", color="purple", patterns=["uvicorn"], users=["sylvester"]),
+            ProcessLabelRule(label="Pricewatch", color="blue", patterns=["uvicorn"], users=["pricewatch"]),
         ]
 
     def test_labels_known_processes(self) -> None:
@@ -32,9 +33,13 @@ class ProcessLabelTests(unittest.TestCase):
         self.assertEqual(ollama["label"], "Ollama")
         self.assertIn("color: #22c55e", ollama["style"])
 
-        monitor = service_match_for_process("uvicorn", self.rules)
+        monitor = service_match_for_process("uvicorn", self.rules, username="sylvester")
         self.assertEqual(monitor["label"], "Mini-PC Monitor")
         self.assertIn("color: #a78bfa", monitor["style"])
+
+        pricewatch = service_match_for_process("uvicorn", self.rules, username="pricewatch")
+        self.assertEqual(pricewatch["label"], "Pricewatch")
+        self.assertIn("color: #3b82f6", pricewatch["style"])
 
     def test_unknown_process(self) -> None:
         self.assertIsNone(service_match_for_process("systemd", self.rules))

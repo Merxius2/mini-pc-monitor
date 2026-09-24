@@ -120,7 +120,7 @@ def get_top_processes(
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             continue
         name = proc.info.get("name") or "?"
-        match = service_match_for_process(name, rules)
+        match = service_match_for_process(name, rules, username=proc.info.get("username"))
         rows.append(
             {
                 "pid": proc.pid,
