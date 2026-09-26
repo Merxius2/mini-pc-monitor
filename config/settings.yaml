@@ -39,7 +39,7 @@ process_labels:
     patterns: [worldserver, authserver, mysqld, mysql]
   - label: Ollama
     color: green
-    patterns: [ollama]
+    patterns: [ollama, llama-server]
   - label: Mini-PC Monitor
     color: purple
     patterns: [uvicorn]

@@ -8,7 +8,7 @@ class ProcessLabelTests(unittest.TestCase):
         self.rules = [
             ProcessLabelRule(label="Good-search MCP", color="cyan", patterns=["chrome", "tailscale"]),
             ProcessLabelRule(label="AzerothCore", color="amber", patterns=["worldserver", "mysqld"]),
-            ProcessLabelRule(label="Ollama", color="green", patterns=["ollama"]),
+            ProcessLabelRule(label="Ollama", color="green", patterns=["ollama", "llama-server"]),
             ProcessLabelRule(label="Mini-PC Monitor", color="purple", patterns=["uvicorn"], users=["sylvester"]),
             ProcessLabelRule(label="Pricewatch", color="blue", patterns=["uvicorn"], users=["pricewatch"]),
         ]
@@ -32,6 +32,9 @@ class ProcessLabelTests(unittest.TestCase):
         ollama = service_match_for_process("ollama", self.rules)
         self.assertEqual(ollama["label"], "Ollama")
         self.assertIn("color: #22c55e", ollama["style"])
+
+        llama_server = service_match_for_process("llama-server", self.rules)
+        self.assertEqual(llama_server["label"], "Ollama")
 
         monitor = service_match_for_process("uvicorn", self.rules, username="sylvester")
         self.assertEqual(monitor["label"], "Mini-PC Monitor")
