@@ -13,6 +13,7 @@ from src.config_loader import SleepScheduleConfig
 _TIME_RE = re.compile(r"^([01]\d|2[0-3]):([0-5]\d)$")
 _CALENDAR_TIME_RE = re.compile(r"(\d{2}:\d{2})")
 _WAKE_RE = re.compile(r'^WAKE="(\d{2}:\d{2})"', re.MULTILINE)
+_SLEEP_RE = re.compile(r'^SLEEP="(\d{2}:\d{2})"', re.MULTILINE)
 
 
 def _run(cmd: list[str]) -> subprocess.CompletedProcess[str]:
@@ -159,7 +160,9 @@ def get_schedule_status(config: SleepScheduleConfig) -> dict[str, Any]:
 def _write_drop_in(timer: str, sleep_or_wake_time: str) -> tuple[bool, str]:
     drop_dir = f"/etc/systemd/system/{timer}.d"
     drop_file = f"{drop_dir}/mini-pc-monitor.conf"
-    content = f"[Timer]\nOnCalendar=*-*-* {sleep_or_wake_time}:00\n"
+    # Clear base OnCalendar first — drop-ins are merged, so a second entry would
+    # defer an extra trigger until the suspend oneshot finishes at morning wake.
+    content = f"[Timer]\nOnCalendar=\nOnCalendar=*-*-* {sleep_or_wake_time}:00\n"
     mkdir = _sudo_run(["mkdir", "-p", drop_dir])
     if mkdir.returncode != 0:
         msg = (mkdir.stderr or mkdir.stdout or "mkdir failed").strip()
@@ -177,13 +180,18 @@ def _write_drop_in(timer: str, sleep_or_wake_time: str) -> tuple[bool, str]:
     return True, drop_file
 
 
-def _update_wake_in_script(script_path: Path, wake_time: str) -> tuple[bool, str]:
+def _update_schedule_in_script(
+    script_path: Path, *, sleep_time: str, wake_time: str
+) -> tuple[bool, str]:
     if not script_path.is_file():
         return False, f"Script not found: {script_path}"
     text = script_path.read_text(encoding="utf-8")
     if not _WAKE_RE.search(text):
         return False, "Wake time marker not found in suspend script"
+    if not _SLEEP_RE.search(text):
+        return False, "Sleep time marker not found in suspend script"
     updated = _WAKE_RE.sub(f'WAKE="{wake_time}"', text, count=1)
+    updated = _SLEEP_RE.sub(f'SLEEP="{sleep_time}"', updated, count=1)
     write = subprocess.run(
         ["sudo", "-n", "tee", str(script_path)],
         input=updated,
@@ -218,7 +226,9 @@ def apply_schedule(
     ok, msg = _write_drop_in(config.keep_awake_timer, wake_time)
     if not ok:
         return False, msg
-    ok, msg = _update_wake_in_script(Path(config.suspend_script), wake_time)
+    ok, msg = _update_schedule_in_script(
+        Path(config.suspend_script), sleep_time=sleep_time, wake_time=wake_time
+    )
     if not ok:
         return False, msg
 
