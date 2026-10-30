@@ -35,8 +35,17 @@
     Samba share
     <span class="tag {% if samba.active == 'active' %}would_hold{% else %}would_sell{% endif %}">{{ samba.active }}</span>
   </div>
-  <p class="storage-hint">Connect from macOS Finder → <strong class="mono">Go → Connect to Server</strong> → <code>{{ samba.unc_path }}</code></p>
-  <p class="detail">Share path: <span class="mono">{{ samba.share_path }}</span> · manage <code>smbd.service</code> on the Services page</p>
+  <div class="storage-connect-row">
+    <div class="storage-qr">
+      <img src="/storage/samba-qr.png" width="168" height="168" alt="QR code for {{ samba.connect_url }}" />
+      <p class="detail">Scan on phone (same Wi‑Fi) · opens <code class="mono">{{ samba.connect_url }}</code></p>
+    </div>
+    <div class="storage-connect-hints">
+      <p class="storage-hint">macOS Finder → <strong class="mono">Go → Connect to Server</strong> → <code>{{ samba.unc_path }}</code> or <code>{{ samba.connect_url }}</code></p>
+      <p class="storage-hint">Windows → File Explorer address bar → <code>{{ samba.unc_path }}</code></p>
+      <p class="detail">Use a Samba user below (guest access is off). Share path: <span class="mono">{{ samba.share_path }}</span> · manage <code>smbd.service</code> on the Services page</p>
+    </div>
+  </div>
 
   <div class="storage-two-col">
     <div>

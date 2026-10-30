@@ -1542,6 +1542,29 @@
 
   .storage-bar-sm { height: 6px; max-width: 120px; }
 
+  .storage-connect-row {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 1.25rem;
+    align-items: start;
+    margin-bottom: 1rem;
+  }
+
+  @media (max-width: 640px) {
+    .storage-connect-row { grid-template-columns: 1fr; }
+  }
+
+  .storage-qr img {
+    display: block;
+    border-radius: 8px;
+    border: 1px solid var(--border, #334155);
+    background: #f8fafc;
+  }
+
+  .storage-qr .detail { margin-top: 0.35rem; max-width: 12rem; }
+
+  .storage-connect-hints .storage-hint { margin: 0 0 0.5rem; }
+
   .storage-hint, .storage-two-col {
     padding: 0 1.15rem 1rem;
   }

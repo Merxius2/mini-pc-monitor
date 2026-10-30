@@ -15,6 +15,7 @@ bash scripts/install-dashboard-service.sh  # restart dashboard after pull
 
 - Share name: `storage`
 - UNC: `//192.168.1.30/storage`
+- Connect URL (QR on dashboard): `smb://192.168.1.30/storage` — **RAID storage** page shows a scannable PNG at `/storage/samba-qr.png`
 - Users are created on the **RAID storage** page (Samba-only accounts, no SSH login).
 
 ## Torrents

@@ -21,6 +21,19 @@ def _smbd_active(config: SambaConfig) -> str:
     return _run(["systemctl", "is-active", config.systemd_unit]).stdout.strip() or "unknown"
 
 
+def smb_connect_url(unc_path: str) -> str:
+    """LAN URL for QR codes and mobile SMB clients (smb://host/share)."""
+    path = unc_path.strip()
+    if path.startswith("//"):
+        return "smb:" + path
+    if path.startswith("\\\\"):
+        normalized = path.replace("\\", "/").lstrip("/")
+        return f"smb://{normalized}"
+    if path.startswith("smb://"):
+        return path
+    return f"smb://{path.lstrip('/')}"
+
+
 def list_samba_users(config: SambaConfig) -> tuple[list[str], str | None]:
     result = _admin(config, "list")
     if result.returncode != 0:
@@ -62,6 +75,7 @@ def get_samba_status(config: SambaConfig) -> dict[str, Any]:
         "share_name": config.share_name,
         "share_path": config.share_path,
         "unc_path": config.unc_path,
+        "connect_url": smb_connect_url(config.unc_path),
         "users": users,
         "users_error": err,
     }

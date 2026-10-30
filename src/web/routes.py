@@ -6,13 +6,14 @@ from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 
 from src.azerothcore import get_azerothcore_status
 from src.clamav import get_clamav_status
 from src.domoticz import get_domoticz_status
 from src.homeassistant import get_homeassistant_status
-from src.samba import add_samba_user, get_samba_status, remove_samba_user
+from src.qr import qr_png_bytes
+from src.samba import add_samba_user, get_samba_status, remove_samba_user, smb_connect_url
 from src.storage import get_raid_status
 from src.transmission import get_transmission_status, transmission_client
 from src.config_loader import load_settings, loggable_service_units, manageable_service_units
@@ -152,6 +153,17 @@ def storage_overview_partial(request: Request):
         request,
         "partials/storage_overview.html",
         _storage_context(settings),
+    )
+
+
+@router.get("/storage/samba-qr.png")
+def samba_qr_png(request: Request):
+    settings = _settings(request)
+    url = smb_connect_url(settings.samba.unc_path)
+    return Response(
+        content=qr_png_bytes(url),
+        media_type="image/png",
+        headers={"Cache-Control": "public, max-age=3600"},
     )
 
 
