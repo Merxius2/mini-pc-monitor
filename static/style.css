@@ -1144,6 +1144,18 @@
     justify-content: flex-end;
   }
 
+  .service-page-link {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--accent);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .service-page-link:hover {
+    text-decoration: underline;
+  }
+
   .inline-form { display: inline; margin: 0; }
 
   .services-loading {
@@ -1487,3 +1499,160 @@
   .action-result.warn { color: var(--amber); }
 
   .signal-bear { background: var(--red) !important; }
+
+  .btn-danger {
+    border-color: rgba(239, 68, 68, 0.45);
+    color: var(--red);
+    background: var(--red-dim);
+  }
+
+  .storage-section { margin-bottom: 1rem; }
+
+  .storage-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    padding: 1rem 1.15rem;
+  }
+
+  .storage-stat-label {
+    display: block;
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 0.35rem;
+  }
+
+  .storage-bar {
+    height: 8px;
+    background: var(--surface2);
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 0.5rem 0 0.25rem;
+    border: 1px solid var(--border);
+  }
+
+  .storage-bar span {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, var(--cyan), var(--blue));
+    border-radius: 3px;
+  }
+
+  .storage-bar-sm { height: 6px; max-width: 120px; }
+
+  .storage-hint, .storage-two-col {
+    padding: 0 1.15rem 1rem;
+  }
+
+  .storage-two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+  }
+
+  @media (max-width: 720px) {
+    .storage-two-col { grid-template-columns: 1fr; }
+  }
+
+  .storage-subhead {
+    font-size: 0.8rem;
+    margin-bottom: 0.65rem;
+    font-weight: 600;
+  }
+
+  .storage-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-bottom: 0.65rem;
+  }
+
+  .storage-form input[type="text"],
+  .storage-form input[type="password"],
+  .storage-form input[type="url"],
+  .storage-form input[type="file"] {
+    font: inherit;
+    padding: 0.45rem 0.55rem;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+  }
+
+  .storage-user-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+
+  .storage-user-list li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.35rem 0.5rem;
+    background: var(--surface2);
+    border-radius: 6px;
+    border: 1px solid var(--border);
+  }
+
+  .storage-upload-row { align-items: start; }
+
+  .storage-torrent-table-wrap {
+    padding: 0 1.15rem 1rem;
+    overflow-x: auto;
+  }
+
+  .storage-torrent-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+  }
+
+  .storage-torrent-table th,
+  .storage-torrent-table td {
+    text-align: left;
+    padding: 0.55rem 0.4rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+
+  .storage-torrent-table th {
+    color: var(--muted);
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .storage-torrent-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    min-width: 140px;
+  }
+
+  .service-log-preview {
+    margin: 0 1.15rem 1rem;
+    padding: 0.65rem;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.68rem;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    max-height: 160px;
+    overflow: auto;
+    color: var(--muted);
+  }
+
+  #storageActionResult .action-result {
+    margin: 0 0 1rem;
+    padding: 0.65rem 1.15rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+  }

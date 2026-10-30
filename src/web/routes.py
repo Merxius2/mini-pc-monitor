@@ -5,10 +5,16 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, Form, HTTPException, Request
+from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 from src.azerothcore import get_azerothcore_status
+from src.clamav import get_clamav_status
+from src.domoticz import get_domoticz_status
+from src.homeassistant import get_homeassistant_status
+from src.samba import add_samba_user, get_samba_status, remove_samba_user
+from src.storage import get_raid_status
+from src.transmission import get_transmission_status, transmission_client
 from src.config_loader import load_settings, loggable_service_units, manageable_service_units
 from src.service_logs import get_service_logs
 from src.metrics import get_host_metrics, get_top_processes
@@ -64,7 +70,11 @@ def _status_context(settings) -> dict:
         "host": host,
         "uptime": format_uptime(host["uptime_seconds"]),
         "now_str": datetime.now().strftime("%A %d %b %Y · %H:%M"),
-        "services": list_services(settings.services),
+        "services": list_services(
+            settings.services,
+            homeassistant=get_homeassistant_status(settings.homeassistant),
+            domoticz=get_domoticz_status(settings.domoticz),
+        ),
         "schedule": get_schedule_status(settings.sleep_schedule),
         **processes,
     }
@@ -109,6 +119,42 @@ def sleep_schedule_partial(request: Request):
     )
 
 
+def _storage_context(settings) -> dict:
+    return {
+        "raid": get_raid_status(
+            md_device=settings.storage.md_device,
+            mount=settings.storage.mount,
+        ),
+        "samba": get_samba_status(settings.samba),
+        "transmission": get_transmission_status(settings.transmission),
+        "clamav": get_clamav_status(settings.clamav),
+    }
+
+
+@router.get("/storage", response_class=HTMLResponse)
+def storage_page(request: Request):
+    settings = _settings(request)
+    storage_ctx = _storage_context(settings)
+    ctx = {
+        "page_title": "RAID storage",
+        "active_nav": "storage",
+        "status": _layout_context(settings),
+        "storage": storage_ctx,
+        **storage_ctx,
+    }
+    return _templates(request).TemplateResponse(request, "storage.html", ctx)
+
+
+@router.get("/partials/storage-overview", response_class=HTMLResponse)
+def storage_overview_partial(request: Request):
+    settings = _settings(request)
+    return _templates(request).TemplateResponse(
+        request,
+        "partials/storage_overview.html",
+        _storage_context(settings),
+    )
+
+
 @router.get("/services", response_class=HTMLResponse)
 def services_page(request: Request):
     settings = _settings(request)
@@ -140,7 +186,11 @@ def dashboard_metrics_partial(request: Request):
         "partials/dashboard_metrics.html",
         {
             "host": host,
-            "services": list_services(settings.services),
+            "services": list_services(
+                settings.services,
+                homeassistant=get_homeassistant_status(settings.homeassistant),
+                domoticz=get_domoticz_status(settings.domoticz),
+            ),
             "hostname": get_hostname_label(settings.hostname_label),
         },
     )
@@ -152,10 +202,16 @@ def services_partial(request: Request):
     detail = request.query_params.get("detail") == "1"
     controls = detail
     ctx: dict = {
-        "services": list_services(settings.services),
+        "services": list_services(
+            settings.services,
+            homeassistant=get_homeassistant_status(settings.homeassistant),
+            domoticz=get_domoticz_status(settings.domoticz),
+        ),
         "detail": detail,
         "controls": controls,
         "ac": get_azerothcore_status(settings.azerothcore),
+        "ha": get_homeassistant_status(settings.homeassistant),
+        "dz": get_domoticz_status(settings.domoticz),
     }
     return _templates(request).TemplateResponse(
         request,
@@ -286,6 +342,106 @@ def action_suspend_now(request: Request):
     settings = _settings(request)
     ok, message = suspend_now(settings.sleep_schedule)
     return _power_action_response(request, ok, message)
+
+
+def _storage_action_response(request: Request, ok: bool, message: str):
+    if request.headers.get("HX-Request"):
+        return _templates(request).TemplateResponse(
+            request,
+            "partials/action_result.html",
+            {"ok": ok, "message": message},
+            headers={"HX-Trigger": "refreshStorage"},
+        )
+    if not ok:
+        raise HTTPException(status_code=400, detail=message)
+    return RedirectResponse("/storage", status_code=303)
+
+
+@router.post("/actions/samba-add-user")
+def action_samba_add_user(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+):
+    settings = _settings(request)
+    ok, message = add_samba_user(settings.samba, username, password)
+    return _storage_action_response(request, ok, message)
+
+
+@router.post("/actions/samba-remove-user")
+def action_samba_remove_user(request: Request, username: str = Form(...)):
+    settings = _settings(request)
+    ok, message = remove_samba_user(settings.samba, username)
+    return _storage_action_response(request, ok, message)
+
+
+@router.post("/actions/torrent-upload")
+async def action_torrent_upload(
+    request: Request,
+    torrent_file: UploadFile = File(...),
+):
+    settings = _settings(request)
+    name = (torrent_file.filename or "").lower()
+    if not name.endswith(".torrent"):
+        return _storage_action_response(request, False, "Upload a .torrent file")
+    data = await torrent_file.read()
+    if not data:
+        return _storage_action_response(request, False, "Empty file")
+    try:
+        client = transmission_client(settings.transmission)
+        client.add_torrent_bytes(data, settings.transmission.download_dir)
+    except Exception as exc:  # noqa: BLE001
+        return _storage_action_response(request, False, str(exc))
+    return _storage_action_response(request, True, f"Added torrent {torrent_file.filename}")
+
+
+@router.post("/actions/torrent-add-magnet")
+def action_torrent_add_magnet(request: Request, magnet: str = Form(...)):
+    settings = _settings(request)
+    if not magnet.strip().startswith("magnet:"):
+        return _storage_action_response(request, False, "Paste a magnet: link")
+    try:
+        transmission_client(settings.transmission).add_torrent_magnet(magnet)
+    except Exception as exc:  # noqa: BLE001
+        return _storage_action_response(request, False, str(exc))
+    return _storage_action_response(request, True, "Magnet link added")
+
+
+@router.post("/actions/torrent-remove")
+def action_torrent_remove(
+    request: Request,
+    torrent_id: int = Form(...),
+    delete_data: str = Form("false"),
+):
+    settings = _settings(request)
+    try:
+        transmission_client(settings.transmission).remove_torrent(
+            torrent_id,
+            delete_data=delete_data == "true",
+        )
+    except Exception as exc:  # noqa: BLE001
+        return _storage_action_response(request, False, str(exc))
+    return _storage_action_response(request, True, "Torrent removed")
+
+
+@router.post("/actions/torrent-start")
+def action_torrent_start(request: Request, torrent_id: int = Form(...)):
+    settings = _settings(request)
+    try:
+        transmission_client(settings.transmission).start_torrent(torrent_id)
+    except Exception as exc:  # noqa: BLE001
+        return _storage_action_response(request, False, str(exc))
+    return _storage_action_response(request, True, "Torrent started")
+
+
+@router.post("/actions/torrent-stop")
+def action_torrent_stop(request: Request, torrent_id: int = Form(...)):
+    settings = _settings(request)
+    try:
+        transmission_client(settings.transmission).stop_torrent(torrent_id)
+    except Exception as exc:  # noqa: BLE001
+        return _storage_action_response(request, False, str(exc))
+    return _storage_action_response(request, True, "Torrent stopped")
 
 
 @router.get("/api/health")

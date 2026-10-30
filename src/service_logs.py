@@ -9,7 +9,13 @@ import urllib.error
 import urllib.request
 from typing import Any
 
-from src.config_loader import AzerothCoreConfig, PricewatchConfig, Settings
+from src.config_loader import (
+    AzerothCoreConfig,
+    DomoticzConfig,
+    HomeAssistantConfig,
+    PricewatchConfig,
+    Settings,
+)
 
 _JOURNAL_LINE = re.compile(
     r"^(?P<time>\S+)\s+\S+\s+(?P<unit>\S+?)(?:\[\d+\])?:\s*(?P<message>.*)$"
@@ -156,6 +162,50 @@ def _pricewatch_summary(config: PricewatchConfig) -> tuple[list[dict[str, str]],
     return [{"label": label, "level": level}], lines
 
 
+def _domoticz_summary(config: DomoticzConfig) -> tuple[list[dict[str, str]], list[str]]:
+    from src.domoticz import get_domoticz_status
+
+    status = get_domoticz_status(config)
+    if not status:
+        return [{"label": "disabled", "level": "no_action"}], []
+
+    if status["ready"]:
+        badge = {"label": "online", "level": "ok"}
+    elif status["container"] == "running":
+        badge = {"label": "starting", "level": "amber"}
+    else:
+        badge = {"label": "offline", "level": "warn"}
+
+    lines = [status["summary"]]
+    for comp in status["components"]:
+        lines.append(f"{comp['label']}: {comp['state']} · {comp['detail']}")
+    return [badge], lines
+
+
+def _homeassistant_summary(
+    config: HomeAssistantConfig,
+) -> tuple[list[dict[str, str]], list[str]]:
+    from src.homeassistant import get_homeassistant_status
+
+    status = get_homeassistant_status(config)
+    if not status:
+        return [{"label": "disabled", "level": "no_action"}], []
+
+    if status["ready"] and status.get("rflink_connected"):
+        badge = {"label": "online", "level": "ok"}
+    elif status["ready"]:
+        badge = {"label": "online", "level": "ok"}
+    elif status["container"] == "running":
+        badge = {"label": "starting", "level": "amber"}
+    else:
+        badge = {"label": "offline", "level": "warn"}
+
+    lines = [status["summary"]]
+    for comp in status["components"]:
+        lines.append(f"{comp['label']}: {comp['state']} · {comp['detail']}")
+    return [badge], lines
+
+
 def _azerothcore_summary(config: AzerothCoreConfig) -> tuple[list[dict[str, str]], list[str]]:
     from src.azerothcore import get_azerothcore_status
 
@@ -191,6 +241,27 @@ def get_service_logs(unit: str, settings: Settings, *, lines: int = 40) -> dict[
     elif unit == "ollama.service":
         badges, summary_lines = _ollama_summary()
         entries, error = _journal_entries(unit, lines=lines)
+    elif unit == settings.domoticz.systemd_unit:
+        badges, summary_lines = _domoticz_summary(settings.domoticz)
+        from src.domoticz import docker_log_entries as domoticz_docker_logs
+
+        entries, error = domoticz_docker_logs(settings.domoticz.container_name, lines=lines)
+        journal, journal_error = _journal_entries(unit, lines=min(lines, 15))
+        if journal_error and not error:
+            error = journal_error
+        entries.extend(journal)
+    elif unit == settings.homeassistant.systemd_unit:
+        badges, summary_lines = _homeassistant_summary(settings.homeassistant)
+        from src.homeassistant import docker_log_entries
+
+        entries, error = docker_log_entries(
+            settings.homeassistant.container_name,
+            lines=lines,
+        )
+        journal, journal_error = _journal_entries(unit, lines=min(lines, 15))
+        if journal_error and not error:
+            error = journal_error
+        entries.extend(journal)
     elif unit == settings.azerothcore.systemd_unit:
         badges, summary_lines = _azerothcore_summary(settings.azerothcore)
         journal, error = _journal_entries(unit, lines=lines)

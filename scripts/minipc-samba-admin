@@ -1,0 +1,48 @@
+#!/bin/bash
+# Samba user admin for Mini-PC Monitor (run via passwordless sudo only).
+set -euo pipefail
+
+SHARE_GROUP="${MINIPC_SAMBA_GROUP:-storage-apps}"
+SHARE_PATH="${MINIPC_SAMBA_PATH:-/mnt/storage/shared}"
+
+usage() {
+  echo "Usage: $0 list | add USER PASS | remove USER" >&2
+  exit 1
+}
+
+valid_user() {
+  [[ "$1" =~ ^[a-z][a-z0-9_-]{0,31}$ ]]
+}
+
+cmd="${1:-}"
+case "$cmd" in
+  list)
+    pdbedit -L 2>/dev/null | cut -d: -f1 | sort
+    ;;
+  add)
+    user="${2:-}"; pass="${3:-}"
+    valid_user "$user" || { echo "Invalid username" >&2; exit 1; }
+    [ -n "$pass" ] || { echo "Password required" >&2; exit 1; }
+    getent group "$SHARE_GROUP" >/dev/null || groupadd "$SHARE_GROUP"
+    if ! id "$user" >/dev/null 2>&1; then
+      useradd -M -s /usr/sbin/nologin -G "$SHARE_GROUP" "$user"
+    else
+      usermod -aG "$SHARE_GROUP" "$user" 2>/dev/null || true
+    fi
+    printf '%s\n%s\n' "$pass" "$pass" | smbpasswd -a -s "$user"
+    smbpasswd -e "$user" >/dev/null
+    chown -R root:"$SHARE_GROUP" "$SHARE_PATH"
+    chmod -R g+rwX "$SHARE_PATH"
+    ;;
+  remove)
+    user="${2:-}"
+    valid_user "$user" || { echo "Invalid username" >&2; exit 1; }
+    smbpasswd -x "$user" 2>/dev/null || true
+    if id "$user" >/dev/null 2>&1; then
+      userdel "$user" 2>/dev/null || true
+    fi
+    ;;
+  *)
+    usage
+    ;;
+esac

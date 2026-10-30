@@ -1,0 +1,31 @@
+# Home Assistant — mini PC (192.168.1.30:8123)
+# Complete onboarding in the UI on first boot if prompted.
+
+default_config:
+
+logger:
+  default: info
+  logs:
+    homeassistant.components.rflink: debug
+
+# Nodo RFLink on Arduino Mega (57600 baud). USB CH340 → /dev/rflink in the container.
+rflink:
+  port: /dev/rflink
+  wait_for_ack: false
+  light:
+    automatic_add: true
+  sensor:
+    automatic_add: true
+
+# Do NOT use the "KlikAanKlikUit" UI integration — it wants a different RF transmitter.
+# KAKU / KlikAanKlikUit sockets use RFLink (newkaku protocol) below.
+#
+# After pressing a socket remote once: Developer Tools → States → light.newkaku_…
+# Then add under rflink.switch.devices (or restart after editing):
+#
+# rflink:
+#   switch:
+#     devices:
+#       newkaku_000abc_01:
+#         name: Living room socket
+#         signal_repetitions: 3

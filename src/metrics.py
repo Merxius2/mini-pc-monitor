@@ -113,14 +113,21 @@ def get_top_processes(
     psutil.cpu_percent(interval=0.1)
     rules = process_labels or []
     rows: list[dict[str, Any]] = []
-    for proc in psutil.process_iter(["pid", "name", "username"]):
+    for proc in psutil.process_iter(["pid", "name", "username", "cmdline"]):
         try:
             cpu = proc.cpu_percent(interval=0.0)
             mem = proc.memory_percent()
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             continue
         name = proc.info.get("name") or "?"
-        match = service_match_for_process(name, rules, username=proc.info.get("username"))
+        cmdline_parts = proc.info.get("cmdline") or []
+        cmdline = " ".join(cmdline_parts) if cmdline_parts else None
+        match = service_match_for_process(
+            name,
+            rules,
+            username=proc.info.get("username"),
+            cmdline=cmdline,
+        )
         rows.append(
             {
                 "pid": proc.pid,

@@ -19,6 +19,31 @@ services:
     label: Ollama
     manage: true
     logs: true
+  - unit: homeassistant.service
+    label: Home Assistant
+    manage: true
+    logs: true
+    dashboard_url: http://192.168.1.30:8123/
+  - unit: domoticz.service
+    label: Domoticz
+    manage: true
+    logs: true
+    dashboard_url: http://192.168.1.30:8082/
+  - unit: smbd.service
+    label: Samba (RAID share)
+    manage: true
+    logs: true
+    dashboard_url: /storage#samba
+  - unit: transmission-daemon.service
+    label: Transmission
+    manage: true
+    logs: true
+    dashboard_url: /storage#torrents
+  - unit: clamav-daemon.service
+    label: ClamAV
+    manage: true
+    logs: true
+    dashboard_url: /storage#clamav
   - unit: mini-pc-monitor.service
     label: Mini-PC Monitor
     manage: false
@@ -48,6 +73,13 @@ process_labels:
     color: blue
     patterns: [uvicorn]
     users: [pricewatch]
+  - label: Home Assistant
+    color: orange
+    patterns: [go2rtc]
+    cmdline_patterns: ["-m homeassistant", "home-assistant"]
+  - label: Domoticz
+    color: teal
+    patterns: [domoticz]
 
 pricewatch:
   enabled: true
@@ -56,6 +88,50 @@ pricewatch:
   health_url: http://127.0.0.1:8081/health
   stats_url: http://127.0.0.1:8081/api/stats
   dashboard_url: http://192.168.1.30:8081/
+
+homeassistant:
+  enabled: true
+  systemd_unit: homeassistant.service
+  container_name: homeassistant
+  health_url: http://127.0.0.1:8123/
+  dashboard_url: http://192.168.1.30:8123/
+  rflink_device: /dev/serial/by-id/usb-1a86_USB2.0-Serial-if00-port0
+
+domoticz:
+  enabled: true
+  systemd_unit: domoticz.service
+  container_name: domoticz
+  health_url: http://127.0.0.1:8082/
+  dashboard_url: http://192.168.1.30:8082/
+  rflink_device: /dev/serial/by-id/usb-1a86_USB2.0-Serial-if00-port0
+
+storage:
+  enabled: true
+  mount: /mnt/storage
+  md_device: /dev/md0
+
+samba:
+  enabled: true
+  systemd_unit: smbd.service
+  share_name: storage
+  share_path: /mnt/storage/shared
+  unc_path: //192.168.1.30/storage
+
+transmission:
+  enabled: true
+  systemd_unit: transmission-daemon.service
+  rpc_url: http://127.0.0.1:9091/transmission/rpc
+  rpc_username: transmission
+  rpc_password_file: /etc/mini-pc-monitor/transmission-rpc-password
+  download_dir: /mnt/storage/downloads/complete
+  incomplete_dir: /mnt/storage/downloads/incomplete
+  watch_dir: /mnt/storage/torrents/watch
+
+clamav:
+  enabled: true
+  daemon_unit: clamav-daemon.service
+  freshclam_unit: clamav-freshclam.service
+  scan_log: /mnt/storage/logs/clamav-scan.log
 
 azerothcore:
   enabled: true

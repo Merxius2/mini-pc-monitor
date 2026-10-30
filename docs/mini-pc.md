@@ -12,12 +12,21 @@ Runtime target: **192.168.1.30** · user `sylvester` · repo path `~/mini-pc-mon
 | `azerothcore.service` | AzerothCore WoW server — toggle from dashboard; stop also shuts down Apache (player map) and MySQL |
 | `minipc-nightly-off.timer` | Suspend at 21:00 — view/edit on dashboard **Mini-PC management** page |
 | `minipc-keep-awake.timer` | Start keep-awake inhibitor at 09:00 |
+| `homeassistant.service` | Home Assistant — [http://192.168.1.30:8123/](http://192.168.1.30:8123/) · see [home-assistant.md](home-assistant.md) |
+| `domoticz.service` | Domoticz + RFLink 433 MHz — [http://192.168.1.30:8082/](http://192.168.1.30:8082/) · see [domoticz.md](domoticz.md) |
+| `smbd.service` | Samba share on RAID — manage on [RAID storage](http://192.168.1.30:8080/storage) · see [storage.md](storage.md) |
+| `transmission-daemon.service` | Torrent downloads to `/mnt/storage` · [storage.md](storage.md) |
+| `clamav-daemon.service` | Auto-scan completed torrents · [storage.md](storage.md) |
 
 Grant dashboard toggles for Pricewatch (if not already covered by a wildcard):
 
 ```sudoers
 sylvester ALL=(ALL) NOPASSWD: /bin/systemctl start pricewatch.service, /bin/systemctl stop pricewatch.service, /bin/systemctl restart pricewatch.service
+sylvester ALL=(ALL) NOPASSWD: /bin/systemctl start homeassistant.service, /bin/systemctl stop homeassistant.service, /bin/systemctl restart homeassistant.service
+sylvester ALL=(ALL) NOPASSWD: /bin/systemctl start domoticz.service, /bin/systemctl stop domoticz.service, /bin/systemctl restart domoticz.service
 ```
+
+The dashboard user must be able to run `docker inspect` and `docker logs` on `homeassistant` (group `docker` is enough).
 
 ## Commands
 

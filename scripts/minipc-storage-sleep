@@ -1,0 +1,12 @@
+#!/bin/sh
+# systemd-sleep(8): re-assemble RAID and remount /mnt/storage after wake.
+set -e
+
+case "$1" in
+  pre)
+    sync
+    ;;
+  post)
+    /usr/local/sbin/minipc-ensure-storage.sh
+    ;;
+esac

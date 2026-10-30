@@ -83,7 +83,12 @@ def inspect_service(unit: str) -> dict[str, Any]:
     }
 
 
-def list_services(configs: list[ServiceConfig]) -> list[dict[str, Any]]:
+def list_services(
+    configs: list[ServiceConfig],
+    *,
+    homeassistant: dict[str, Any] | None = None,
+    domoticz: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
     if not configs:
         return []
     states = _batch_service_states([cfg.unit for cfg in configs])
@@ -91,6 +96,18 @@ def list_services(configs: list[ServiceConfig]) -> list[dict[str, Any]]:
     for cfg in configs:
         state = states[cfg.unit]
         active = state["active"]
+        runtime = None
+        if homeassistant and cfg.unit == homeassistant.get("unit"):
+            runtime = homeassistant
+        elif domoticz and cfg.unit == domoticz.get("unit"):
+            runtime = domoticz
+        if runtime:
+            if runtime.get("container") == "running":
+                active = "active"
+            elif runtime.get("systemd_active") == "active":
+                active = "activating"
+            else:
+                active = "inactive"
         level = "ok"
         if active not in ("active", "activating"):
             level = "warn" if active in ("inactive", "failed") else "amber"

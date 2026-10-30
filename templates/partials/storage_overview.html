@@ -1,0 +1,190 @@
+{% set tx = transmission %}
+{% set clam = clamav %}
+
+<section class="panel storage-section" id="raid">
+  <div class="panel-header">
+    RAID mirror
+    <span class="tag {% if raid.overall == 'ok' %}would_hold{% elif raid.overall == 'amber' %}would_wait{% else %}would_sell{% endif %}">
+      {% if raid.mount.mounted %}mounted{% else %}not mounted{% endif %}
+    </span>
+  </div>
+  <div class="storage-grid">
+    <div class="storage-stat">
+      <span class="storage-stat-label">Mount</span>
+      <strong class="mono">{{ raid.mount.mount }}</strong>
+    </div>
+    <div class="storage-stat">
+      <span class="storage-stat-label">Used</span>
+      <strong>{{ raid.mount.used_human }} / {{ raid.mount.total_human }}</strong>
+      <div class="storage-bar"><span style="width: {{ raid.mount.percent }}%"></span></div>
+      <span class="detail">{{ raid.mount.percent }}% · {{ raid.mount.free_human }} free</span>
+    </div>
+    {% if raid.array %}
+    <div class="storage-stat">
+      <span class="storage-stat-label">Array</span>
+      <strong class="mono">{{ raid.array.device }} · {{ raid.array.level }}</strong>
+      <span class="detail">{{ raid.array.state }}{% if raid.array.sync %} · [{{ raid.array.sync }}]{% endif %}</span>
+      <span class="detail">Members: {{ raid.array.members | join(', ') }}</span>
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+<section class="panel storage-section" id="samba">
+  <div class="panel-header">
+    Samba share
+    <span class="tag {% if samba.active == 'active' %}would_hold{% else %}would_sell{% endif %}">{{ samba.active }}</span>
+  </div>
+  <p class="storage-hint">Connect from macOS Finder → <strong class="mono">Go → Connect to Server</strong> → <code>{{ samba.unc_path }}</code></p>
+  <p class="detail">Share path: <span class="mono">{{ samba.share_path }}</span> · manage <code>smbd.service</code> on the Services page</p>
+
+  <div class="storage-two-col">
+    <div>
+      <h3 class="storage-subhead">Users</h3>
+      {% if samba.users_error %}
+      <p class="action-log-empty">{{ samba.users_error }}</p>
+      {% elif samba.users %}
+      <ul class="storage-user-list">
+        {% for u in samba.users %}
+        <li>
+          <span class="mono">{{ u }}</span>
+          <form class="inline-form"
+                hx-post="/actions/samba-remove-user"
+                hx-target="#storageActionResult"
+                hx-swap="innerHTML"
+                hx-confirm="Remove Samba user {{ u }}?">
+            <input type="hidden" name="username" value="{{ u }}" />
+            <button type="submit" class="btn btn-sm btn-danger">Remove</button>
+          </form>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="action-log-empty">No Samba users yet.</p>
+      {% endif %}
+    </div>
+    <div>
+      <h3 class="storage-subhead">Add user</h3>
+      <form class="storage-form"
+            hx-post="/actions/samba-add-user"
+            hx-target="#storageActionResult"
+            hx-swap="innerHTML">
+        <label>Username<input name="username" required pattern="[a-z][a-z0-9_-]{0,31}" autocomplete="username" /></label>
+        <label>Password<input name="password" type="password" required minlength="8" autocomplete="new-password" /></label>
+        <button type="submit" class="btn">Create Samba user</button>
+      </form>
+      <p class="detail">Creates a system account (no shell login) and Samba password for LAN file access.</p>
+    </div>
+  </div>
+</section>
+
+<section class="panel storage-section" id="torrents">
+  <div class="panel-header">
+    Torrents (Transmission)
+    <span class="tag {% if tx.active == 'active' and tx.rpc_ok %}would_hold{% elif tx.active == 'active' %}would_wait{% else %}would_sell{% endif %}">
+      {{ tx.active }}{% if tx.rpc_error %} · RPC error{% endif %}
+    </span>
+  </div>
+  {% if tx.rpc_error %}
+  <p class="action-log-empty mono">{{ tx.rpc_error }}</p>
+  {% endif %}
+  <p class="detail">Downloads: <span class="mono">{{ tx.download_dir }}</span> · toggle <code>transmission-daemon.service</code> on Services</p>
+
+  <div class="storage-two-col storage-upload-row">
+    <form class="storage-form"
+          hx-post="/actions/torrent-upload"
+          hx-encoding="multipart/form-data"
+          hx-target="#storageActionResult"
+          hx-swap="innerHTML">
+      <label>Upload .torrent<input type="file" name="torrent_file" accept=".torrent,application/x-bittorrent" required /></label>
+      <button type="submit" class="btn">Add torrent</button>
+    </form>
+    <form class="storage-form"
+          hx-post="/actions/torrent-add-magnet"
+          hx-target="#storageActionResult"
+          hx-swap="innerHTML">
+      <label>Magnet link<input name="magnet" type="url" placeholder="magnet:?xt=..." required /></label>
+      <button type="submit" class="btn btn-sm">Add magnet</button>
+    </form>
+  </div>
+
+  {% if tx.torrents %}
+  <div class="storage-torrent-table-wrap">
+    <table class="storage-torrent-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Progress</th>
+          <th>Status</th>
+          <th>↓ / ↑</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in tx.torrents %}
+        <tr>
+          <td>
+            <strong>{{ t.name }}</strong>
+            {% if t.error %}<span class="detail mono">{{ t.error }}</span>{% endif %}
+            <span class="detail">{{ t.size_human }} · ETA {{ t.eta }}</span>
+          </td>
+          <td>
+            <div class="storage-bar storage-bar-sm"><span style="width: {{ t.percent }}%"></span></div>
+            <span class="mono detail">{{ t.percent }}%</span>
+          </td>
+          <td><span class="tag no_action">{{ t.status }}</span></td>
+          <td class="mono detail">{{ t.download_rate }} · {{ t.upload_rate }}</td>
+          <td class="storage-torrent-actions">
+            {% if t.status_code == 0 %}
+            <form class="inline-form" hx-post="/actions/torrent-start" hx-target="#storageActionResult" hx-swap="innerHTML">
+              <input type="hidden" name="torrent_id" value="{{ t.id }}" />
+              <button type="submit" class="btn btn-sm">Start</button>
+            </form>
+            {% else %}
+            <form class="inline-form" hx-post="/actions/torrent-stop" hx-target="#storageActionResult" hx-swap="innerHTML">
+              <input type="hidden" name="torrent_id" value="{{ t.id }}" />
+              <button type="submit" class="btn btn-sm">Stop</button>
+            </form>
+            {% endif %}
+            <form class="inline-form"
+                  hx-post="/actions/torrent-remove"
+                  hx-target="#storageActionResult"
+                  hx-swap="innerHTML"
+                  hx-confirm="Remove torrent only (keep files)?">
+              <input type="hidden" name="torrent_id" value="{{ t.id }}" />
+              <input type="hidden" name="delete_data" value="false" />
+              <button type="submit" class="btn btn-sm">Remove</button>
+            </form>
+            <form class="inline-form"
+                  hx-post="/actions/torrent-remove"
+                  hx-target="#storageActionResult"
+                  hx-swap="innerHTML"
+                  hx-confirm="Remove torrent AND delete downloaded files?">
+              <input type="hidden" name="torrent_id" value="{{ t.id }}" />
+              <input type="hidden" name="delete_data" value="true" />
+              <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="action-log-empty">No active torrents.</p>
+  {% endif %}
+</section>
+
+<section class="panel storage-section" id="clamav">
+  <div class="panel-header">
+    ClamAV (auto-scan downloads)
+    <span class="tag {% if clam.overall == 'ok' %}would_hold{% else %}would_sell{% endif %}">{{ clam.daemon_active }}</span>
+  </div>
+  <p class="detail">Runs after each completed torrent · freshclam: {{ clam.freshclam_active }} · virus DB: {{ clam.db_updated or '—' }}</p>
+  {% if clam.log_tail %}
+  <pre class="service-log-preview">{% for line in clam.log_tail %}{{ line }}
+{% endfor %}</pre>
+  {% else %}
+  <p class="action-log-empty">No scan log entries yet ({{ clam.scan_log }}).</p>
+  {% endif %}
+</section>

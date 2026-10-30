@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="top-bar">
+  <div>
+    <h2>RAID storage</h2>
+    <p>Mirror status on {{ status.hostname }} · Samba LAN share · torrent downloads with ClamAV scanning</p>
+  </div>
+</div>
+
+<div id="storageActionResult"></div>
+
+<div id="storagePanel"
+     hx-get="/partials/storage-overview"
+     hx-trigger="load, every 10s, refreshStorage from:body"
+     hx-swap="innerHTML">
+  {% include "partials/storage_overview.html" %}
+</div>
+{% endblock %}

@@ -1,9 +1,22 @@
 {% for svc in services %}
 {% set log_slug = svc.unit | replace('.', '-') %}
-<div class="service-block{% if detail and ac and svc.unit == ac.unit %} service-block-expanded{% endif %}">
+{% set is_ha = ha and svc.unit == ha.unit %}
+{% set is_dz = dz and svc.unit == dz.unit %}
+{% set is_ac = ac and svc.unit == ac.unit %}
+{% set is_internal_link = svc.dashboard_url and svc.dashboard_url.startswith('/') %}
+{% set can_open_dashboard = svc.dashboard_url and (is_internal_link or (is_ha and ha.ready) or (is_dz and dz.ready) or (not is_ha and not is_dz and svc.active == 'active')) %}
+<div class="service-block{% if detail and (is_ac or is_ha or is_dz) %} service-block-expanded{% endif %}">
   <div class="watch-item service-row{% if detail and svc.logs %} service-row-has-logs{% endif %}">
     <span class="service-row-main">
-      {% if ac and svc.unit == ac.unit %}
+      {% if is_ha %}
+      <span class="signal-dot {% if ha.overall == 'ok' %}signal-bull{% elif ha.overall == 'warn' %}signal-bear{% else %}signal-neutral{% endif %}"></span>
+      <strong>{{ svc.label }}</strong>
+      <span class="detail mono">{{ svc.unit }} · {{ ha.container }}</span>
+      {% elif is_dz %}
+      <span class="signal-dot {% if dz.overall == 'ok' %}signal-bull{% elif dz.overall == 'warn' %}signal-bear{% else %}signal-neutral{% endif %}"></span>
+      <strong>{{ svc.label }}</strong>
+      <span class="detail mono">{{ svc.unit }} · {{ dz.container }}</span>
+      {% elif is_ac %}
       <span class="signal-dot {% if ac.overall == 'ok' %}signal-bull{% elif ac.overall == 'warn' %}signal-bear{% else %}signal-neutral{% endif %}"></span>
       <strong>{{ svc.label }}</strong>
       <span class="detail mono">{{ svc.unit }}</span>
@@ -23,10 +36,23 @@
         Show logs
       </button>
       {% endif %}
-      {% if detail and svc.dashboard_url and svc.active == 'active' %}
-      <a href="{{ svc.dashboard_url }}" class="btn btn-sm" target="_blank" rel="noopener">Open dashboard</a>
+      {% if can_open_dashboard %}
+      <a href="{{ svc.dashboard_url }}"
+         class="{% if detail %}btn btn-sm{% else %}service-page-link{% endif %}"
+         {% if not is_internal_link %}target="_blank" rel="noopener"{% endif %}
+         title="Open {{ svc.label }}">
+        {% if detail %}Open dashboard{% else %}Open{% endif %}
+      </a>
       {% endif %}
-      {% if ac and svc.unit == ac.unit %}
+      {% if is_ha %}
+      <span class="tag {% if ha.ready %}would_hold{% elif ha.overall == 'amber' %}would_wait{% elif ha.overall == 'warn' %}would_sell{% else %}no_action{% endif %}">
+        {% if ha.ready %}online{% elif ha.container == 'running' %}starting{% else %}stopped{% endif %}
+      </span>
+      {% elif is_dz %}
+      <span class="tag {% if dz.ready %}would_hold{% elif dz.overall == 'amber' %}would_wait{% elif dz.overall == 'warn' %}would_sell{% else %}no_action{% endif %}">
+        {% if dz.ready %}online{% elif dz.container == 'running' %}starting{% else %}stopped{% endif %}
+      </span>
+      {% elif is_ac %}
       <span class="tag {% if ac.ready %}would_hold{% elif ac.overall == 'amber' %}would_wait{% elif ac.overall == 'warn' %}would_sell{% else %}no_action{% endif %}">
         {% if ac.ready %}online{% elif ac.overall == 'amber' %}loading{% else %}stopped{% endif %}
       </span>
@@ -34,7 +60,15 @@
       <span class="tag {% if svc.active == 'active' %}would_hold{% elif svc.active == 'activating' %}would_wait{% elif svc.active == 'failed' %}would_sell{% else %}no_action{% endif %}">{{ svc.active }}</span>
       {% endif %}
       {% if controls and svc.manage %}
-      {% set is_running = (ac.systemd_active if (detail and ac and svc.unit == ac.unit) else svc.active) in ('active', 'activating') %}
+      {% if is_ha %}
+      {% set is_running = ha.container == 'running' %}
+      {% elif is_dz %}
+      {% set is_running = dz.container == 'running' %}
+      {% elif is_ac %}
+      {% set is_running = ac.systemd_active in ('active', 'activating') %}
+      {% else %}
+      {% set is_running = svc.active in ('active', 'activating') %}
+      {% endif %}
       <form class="inline-form service-toggle-form"
             hx-post="{% if is_running %}/actions/stop-service{% else %}/actions/start-service{% endif %}"
             hx-target="#actionResult"
@@ -60,7 +94,15 @@
       {% endif %}
     </span>
   </div>
-  {% if detail and ac and svc.unit == ac.unit %}
+  {% if detail and is_ha %}
+  {% with ac=ha %}
+  {% include "partials/azerothcore_components.html" %}
+  {% endwith %}
+  {% elif detail and is_dz %}
+  {% with ac=dz %}
+  {% include "partials/azerothcore_components.html" %}
+  {% endwith %}
+  {% elif detail and is_ac %}
   {% include "partials/azerothcore_components.html" %}
   {% endif %}
   {% if detail and svc.logs %}

@@ -68,6 +68,16 @@ PROCESS_SERVICE_COLORS: dict[str, dict[str, str]] = {
         "bg": "rgba(59, 130, 246, 0.18)",
         "border": "rgba(59, 130, 246, 0.45)",
     },
+    "orange": {
+        "fg": "#fb923c",
+        "bg": "rgba(251, 146, 60, 0.18)",
+        "border": "rgba(251, 146, 60, 0.45)",
+    },
+    "teal": {
+        "fg": "#2dd4bf",
+        "bg": "rgba(45, 212, 191, 0.18)",
+        "border": "rgba(45, 212, 191, 0.45)",
+    },
     "red": {
         "fg": "#ef4444",
         "bg": "rgba(239, 68, 68, 0.18)",
@@ -80,6 +90,7 @@ PROCESS_SERVICE_COLORS: dict[str, dict[str, str]] = {
 class ProcessLabelRule:
     label: str
     patterns: list[str] = field(default_factory=list)
+    cmdline_patterns: list[str] = field(default_factory=list)
     color: str = "cyan"
     users: list[str] = field(default_factory=list)
 
@@ -91,6 +102,64 @@ class PricewatchConfig:
     health_url: str = "http://127.0.0.1:8081/health"
     stats_url: str = "http://127.0.0.1:8081/api/stats"
     dashboard_url: str = "http://192.168.1.30:8081/"
+
+
+@dataclass
+class HomeAssistantConfig:
+    enabled: bool = True
+    systemd_unit: str = "homeassistant.service"
+    container_name: str = "homeassistant"
+    health_url: str = "http://127.0.0.1:8123/"
+    dashboard_url: str = "http://192.168.1.30:8123/"
+    rflink_device: str = "/dev/serial/by-id/usb-1a86_USB2.0-Serial-if00-port0"
+
+
+@dataclass
+class DomoticzConfig:
+    enabled: bool = True
+    systemd_unit: str = "domoticz.service"
+    container_name: str = "domoticz"
+    health_url: str = "http://127.0.0.1:8082/"
+    dashboard_url: str = "http://192.168.1.30:8082/"
+    rflink_device: str = "/dev/serial/by-id/usb-1a86_USB2.0-Serial-if00-port0"
+
+
+@dataclass
+class StorageConfig:
+    enabled: bool = True
+    mount: str = "/mnt/storage"
+    md_device: str = "/dev/md0"
+
+
+@dataclass
+class SambaConfig:
+    enabled: bool = True
+    systemd_unit: str = "smbd.service"
+    share_name: str = "storage"
+    share_path: str = "/mnt/storage/shared"
+    unc_path: str = "//192.168.1.30/storage"
+    admin_script: str = "/usr/local/sbin/minipc-samba-admin"
+
+
+@dataclass
+class TransmissionConfig:
+    enabled: bool = True
+    systemd_unit: str = "transmission-daemon.service"
+    rpc_url: str = "http://127.0.0.1:9091/transmission/rpc"
+    rpc_username: str = "transmission"
+    rpc_password: str = ""
+    rpc_password_file: str = "/etc/mini-pc-monitor/transmission-rpc-password"
+    download_dir: str = "/mnt/storage/downloads/complete"
+    incomplete_dir: str = "/mnt/storage/downloads/incomplete"
+    watch_dir: str = "/mnt/storage/torrents/watch"
+
+
+@dataclass
+class ClamAvConfig:
+    enabled: bool = True
+    daemon_unit: str = "clamav-daemon.service"
+    freshclam_unit: str = "clamav-freshclam.service"
+    scan_log: str = "/mnt/storage/logs/clamav-scan.log"
 
 
 @dataclass
@@ -113,6 +182,12 @@ class Settings:
     sleep_schedule: SleepScheduleConfig = field(default_factory=SleepScheduleConfig)
     azerothcore: AzerothCoreConfig = field(default_factory=AzerothCoreConfig)
     pricewatch: PricewatchConfig = field(default_factory=PricewatchConfig)
+    homeassistant: HomeAssistantConfig = field(default_factory=HomeAssistantConfig)
+    domoticz: DomoticzConfig = field(default_factory=DomoticzConfig)
+    storage: StorageConfig = field(default_factory=StorageConfig)
+    samba: SambaConfig = field(default_factory=SambaConfig)
+    transmission: TransmissionConfig = field(default_factory=TransmissionConfig)
+    clamav: ClamAvConfig = field(default_factory=ClamAvConfig)
 
 
 def load_settings(path: Path | None = None) -> Settings:
@@ -122,6 +197,12 @@ def load_settings(path: Path | None = None) -> Settings:
     sleep_schedule = SleepScheduleConfig(**data.get("sleep_schedule", {}))
     azerothcore = AzerothCoreConfig(**data.get("azerothcore", {}))
     pricewatch = PricewatchConfig(**data.get("pricewatch", {}))
+    homeassistant = HomeAssistantConfig(**data.get("homeassistant", {}))
+    domoticz = DomoticzConfig(**data.get("domoticz", {}))
+    storage = StorageConfig(**data.get("storage", {}))
+    samba = SambaConfig(**data.get("samba", {}))
+    transmission = TransmissionConfig(**data.get("transmission", {}))
+    clamav = ClamAvConfig(**data.get("clamav", {}))
     process_labels = [ProcessLabelRule(**r) for r in data.get("process_labels", [])]
     return Settings(
         server=ServerConfig(**data.get("server", {})),
@@ -132,6 +213,12 @@ def load_settings(path: Path | None = None) -> Settings:
         sleep_schedule=sleep_schedule,
         azerothcore=azerothcore,
         pricewatch=pricewatch,
+        homeassistant=homeassistant,
+        domoticz=domoticz,
+        storage=storage,
+        samba=samba,
+        transmission=transmission,
+        clamav=clamav,
     )
 
 
@@ -161,12 +248,20 @@ def service_match_for_process(
     rules: list[ProcessLabelRule],
     *,
     username: str | None = None,
+    cmdline: str | None = None,
 ) -> dict[str, str] | None:
     lower = name.lower()
+    cmdline_lower = (cmdline or "").lower()
     for rule in rules:
         if rule.users and (not username or username not in rule.users):
             continue
-        if any(pattern.lower() in lower for pattern in rule.patterns):
+        name_hit = bool(rule.patterns) and any(
+            pattern.lower() in lower for pattern in rule.patterns
+        )
+        cmd_hit = bool(rule.cmdline_patterns) and bool(cmdline_lower) and any(
+            pattern.lower() in cmdline_lower for pattern in rule.cmdline_patterns
+        )
+        if name_hit or cmd_hit:
             return {
                 "label": rule.label,
                 "color": rule.color,

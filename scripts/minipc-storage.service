@@ -1,0 +1,14 @@
+[Unit]
+Description=Assemble MD RAID and mount /mnt/storage
+DefaultDependencies=no
+After=systemd-udev-settle.service
+Before=local-fs.target
+Wants=systemd-udev-settle.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/minipc-ensure-storage.sh
+
+[Install]
+WantedBy=local-fs.target

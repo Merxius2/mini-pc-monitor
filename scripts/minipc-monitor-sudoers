@@ -1,0 +1,5 @@
+# Mini-PC Monitor — storage stack (script validates subcommands)
+sylvester ALL=(ALL) NOPASSWD: /usr/local/sbin/minipc-samba-admin
+sylvester ALL=(ALL) NOPASSWD: /bin/systemctl start smbd.service, /bin/systemctl stop smbd.service, /bin/systemctl restart smbd.service
+sylvester ALL=(ALL) NOPASSWD: /bin/systemctl start transmission-daemon.service, /bin/systemctl stop transmission-daemon.service, /bin/systemctl restart transmission-daemon.service
+sylvester ALL=(ALL) NOPASSWD: /bin/systemctl start clamav-daemon.service, /bin/systemctl stop clamav-daemon.service, /bin/systemctl restart clamav-daemon.service

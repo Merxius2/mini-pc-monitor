@@ -1,0 +1,14 @@
+services:
+  domoticz:
+    container_name: domoticz
+    image: domoticz/domoticz:stable
+    environment:
+      - TZ=Europe/Amsterdam
+    ports:
+      - "8082:8080"
+    volumes:
+      - ./userdata:/opt/domoticz/userdata
+      - /etc/localtime:/etc/localtime:ro
+    devices:
+      - ${RFLINK_DEVICE:-/dev/serial/by-id/usb-1a86_USB2.0-Serial-if00-port0}:/dev/ttyUSB0
+    restart: unless-stopped

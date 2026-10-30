@@ -44,6 +44,29 @@ class ProcessLabelTests(unittest.TestCase):
         self.assertEqual(pricewatch["label"], "Pricewatch")
         self.assertIn("color: #3b82f6", pricewatch["style"])
 
+    def test_cmdline_home_assistant(self) -> None:
+        rules = [
+            ProcessLabelRule(
+                label="Home Assistant",
+                color="orange",
+                patterns=["go2rtc"],
+                cmdline_patterns=["-m homeassistant"],
+            ),
+        ]
+        match = service_match_for_process(
+            "python3",
+            rules,
+            cmdline="python3 -P -m homeassistant --config /config",
+        )
+        self.assertEqual(match["label"], "Home Assistant")
+        go2rtc = service_match_for_process("go2rtc", rules)
+        self.assertEqual(go2rtc["label"], "Home Assistant")
+
+    def test_domoticz_process_name(self) -> None:
+        rules = [ProcessLabelRule(label="Domoticz", color="teal", patterns=["domoticz"])]
+        match = service_match_for_process("domoticz", rules)
+        self.assertEqual(match["label"], "Domoticz")
+
     def test_unknown_process(self) -> None:
         self.assertIsNone(service_match_for_process("systemd", self.rules))
 
