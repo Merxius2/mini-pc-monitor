@@ -1,0 +1,49 @@
+{% if updates.error %}
+<p class="system-updates-error mono">{{ updates.error }}</p>
+<p class="detail">Install <code>scripts/minipc-system-update</code> and sudoers (see docs/mini-pc.md).</p>
+{% else %}
+<div class="system-updates-summary">
+  <span class="tag {% if updates.count == 0 and not updates.reboot_required %}would_hold{% elif updates.reboot_required %}would_wait{% else %}would_sell{% endif %}">
+    {% if updates.count == 0 %}up to date{% else %}{{ updates.count }} upgrade{{ 's' if updates.count != 1 else '' }}{% endif %}
+  </span>
+  {% if updates.reboot_required %}
+  <span class="system-updates-reboot">Reboot required{% if updates.reboot_hint %} · {{ updates.reboot_hint }}{% endif %}</span>
+  {% endif %}
+</div>
+
+{% if updates.packages %}
+<ul class="system-updates-list">
+  {% for pkg in updates.packages %}
+  <li><span class="mono">{{ pkg.name }}</span> <span class="detail">{{ pkg.version }}</span></li>
+  {% endfor %}
+  {% if updates.packages_truncated %}
+  <li class="detail">…and more (run refresh to see full list via apt)</li>
+  {% endif %}
+</ul>
+{% elif updates.count == 0 %}
+<p class="action-log-empty">No pending upgrades.</p>
+{% endif %}
+
+<div class="system-updates-actions">
+  <form class="inline-form"
+        hx-post="/actions/system-updates-refresh"
+        hx-target="#managementUpdatesActionResult"
+        hx-swap="innerHTML"
+        hx-indicator="#systemUpdatesSpinner">
+    <button type="submit" class="btn btn-sm">Check for updates</button>
+  </form>
+  {% if updates.count > 0 %}
+  <form class="inline-form"
+        hx-post="/actions/system-updates-apply"
+        hx-target="#managementUpdatesActionResult"
+        hx-swap="innerHTML"
+        hx-indicator="#systemUpdatesSpinner"
+        hx-timeout="600000"
+        hx-confirm="Install all available upgrades now? This can take several minutes and may restart services.">
+    <button type="submit" class="btn btn-sm">Install updates</button>
+  </form>
+  {% endif %}
+  <span id="systemUpdatesSpinner" class="htmx-indicator detail">Working…</span>
+</div>
+<p class="detail system-updates-hint">Uses apt on this machine · schedule long installs when WoW/HA are idle</p>
+{% endif %}

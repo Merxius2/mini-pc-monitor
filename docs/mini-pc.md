@@ -28,6 +28,12 @@ sylvester ALL=(ALL) NOPASSWD: /bin/systemctl start domoticz.service, /bin/system
 
 The dashboard user must be able to run `docker inspect` and `docker logs` on `homeassistant` (group `docker` is enough).
 
+System updates on **Mini-PC management** use `/usr/local/sbin/minipc-system-update` (install once):
+
+```bash
+bash scripts/install-system-updates.sh
+```
+
 ## Commands
 
 ```bash

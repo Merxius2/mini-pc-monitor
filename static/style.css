@@ -1626,6 +1626,39 @@
 
   .storage-upload-row { align-items: start; }
 
+  .torrent-drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    padding: 0.75rem;
+    transition: border-color 0.15s, background 0.15s;
+  }
+
+  .torrent-drop-zone-active {
+    border-color: var(--cyan);
+    background: rgba(34, 211, 238, 0.08);
+  }
+
+  .torrent-drop-label {
+    font-size: 0.8rem;
+    margin-bottom: 0.5rem;
+    color: var(--muted);
+  }
+
+  .torrent-drop-file-label {
+    margin-bottom: 0.5rem;
+  }
+
+  .torrent-tracker-hint {
+    padding: 0 1.15rem 0.5rem;
+    max-width: 52rem;
+  }
+
+  .torrent-row-error {
+    color: var(--amber);
+    display: block;
+    margin-top: 0.2rem;
+  }
+
   .storage-torrent-table-wrap {
     padding: 0 1.15rem 1rem;
     overflow-x: auto;
@@ -1670,6 +1703,80 @@
     max-height: 160px;
     overflow: auto;
     color: var(--muted);
+  }
+
+  .system-updates-panel {
+    margin-bottom: 1rem;
+  }
+
+  .system-updates-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.85rem 1.15rem 0.35rem;
+  }
+
+  .system-updates-reboot {
+    font-size: 0.75rem;
+    color: var(--amber);
+  }
+
+  .system-updates-list {
+    list-style: none;
+    max-height: 140px;
+    overflow-y: auto;
+    margin: 0 1.15rem 0.75rem;
+    padding: 0.35rem 0.5rem;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.75rem;
+  }
+
+  .system-updates-list li {
+    padding: 0.25rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .system-updates-list li:last-child {
+    border-bottom: none;
+  }
+
+  .system-updates-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0 1.15rem 0.85rem;
+  }
+
+  .system-updates-hint {
+    padding: 0 1.15rem 1rem;
+  }
+
+  .system-updates-error {
+    padding: 0.85rem 1.15rem;
+    color: var(--amber);
+    font-size: 0.78rem;
+  }
+
+  .htmx-indicator {
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .htmx-request .htmx-indicator,
+  .htmx-request.htmx-indicator {
+    opacity: 1;
+  }
+
+  #managementUpdatesActionResult .action-result {
+    margin: 0 1.15rem 0.75rem;
+    padding: 0.65rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface2);
   }
 
   #storageActionResult .action-result {

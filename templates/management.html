@@ -3,7 +3,7 @@
 <div class="top-bar">
   <div>
     <h2>Mini-PC management</h2>
-    <p>Power control and automatic sleep schedule · {{ status.hostname }}</p>
+    <p>Power, sleep schedule, and system updates · {{ status.hostname }}</p>
   </div>
 </div>
 
@@ -44,5 +44,19 @@
     <div class="services-loading">Loading schedule…</div>
   </div>
   <div id="scheduleActionResult"></div>
+</div>
+
+<div class="panel system-updates-panel">
+  <div class="panel-header">
+    System updates
+    <span class="badge">apt</span>
+  </div>
+  <div id="managementUpdatesActionResult"></div>
+  <div id="systemUpdatesPanel"
+       hx-get="/partials/system-updates"
+       hx-trigger="load, every 120s, refreshSystemUpdates from:body"
+       hx-swap="innerHTML">
+    <div class="services-loading">Checking updates…</div>
+  </div>
 </div>
 {% endblock %}

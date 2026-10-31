@@ -149,9 +149,16 @@ class TransmissionConfig:
     rpc_username: str = "transmission"
     rpc_password: str = ""
     rpc_password_file: str = "/etc/mini-pc-monitor/transmission-rpc-password"
-    download_dir: str = "/mnt/storage/downloads/complete"
+    download_dir: str = "/mnt/storage/shared/Downloads"
     incomplete_dir: str = "/mnt/storage/downloads/incomplete"
     watch_dir: str = "/mnt/storage/torrents/watch"
+
+
+@dataclass
+class SystemUpdatesConfig:
+    enabled: bool = True
+    helper_script: str = "/usr/local/sbin/minipc-system-update"
+    max_packages_shown: int = 12
 
 
 @dataclass
@@ -188,6 +195,7 @@ class Settings:
     samba: SambaConfig = field(default_factory=SambaConfig)
     transmission: TransmissionConfig = field(default_factory=TransmissionConfig)
     clamav: ClamAvConfig = field(default_factory=ClamAvConfig)
+    system_updates: SystemUpdatesConfig = field(default_factory=SystemUpdatesConfig)
 
 
 def load_settings(path: Path | None = None) -> Settings:
@@ -203,6 +211,7 @@ def load_settings(path: Path | None = None) -> Settings:
     samba = SambaConfig(**data.get("samba", {}))
     transmission = TransmissionConfig(**data.get("transmission", {}))
     clamav = ClamAvConfig(**data.get("clamav", {}))
+    system_updates = SystemUpdatesConfig(**data.get("system_updates", {}))
     process_labels = [ProcessLabelRule(**r) for r in data.get("process_labels", [])]
     return Settings(
         server=ServerConfig(**data.get("server", {})),
@@ -219,6 +228,7 @@ def load_settings(path: Path | None = None) -> Settings:
         samba=samba,
         transmission=transmission,
         clamav=clamav,
+        system_updates=system_updates,
     )
 
 

@@ -1,6 +1,15 @@
 import unittest
 
-from src.storage import _parse_mdstat, get_raid_status
+from src.storage import _human_bytes, _parse_mdstat, get_raid_status
+
+
+class HumanBytesTests(unittest.TestCase):
+    def test_formats_hundreds_of_gb(self) -> None:
+        # ~880 GiB filesystem
+        self.assertEqual(_human_bytes(943_837_974_528), "879.0 GB")
+
+    def test_formats_small_usage(self) -> None:
+        self.assertEqual(_human_bytes(2_200_000), "2.1 MB")
 
 
 class ParseMdstatTests(unittest.TestCase):

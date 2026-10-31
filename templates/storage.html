@@ -11,8 +11,85 @@
 
 <div id="storagePanel"
      hx-get="/partials/storage-overview"
-     hx-trigger="load, every 10s, refreshStorage from:body"
+     hx-trigger="load, every 10s [!storagePanelUserEditing()], refreshStorage from:body"
      hx-swap="innerHTML">
   {% include "partials/storage_overview.html" %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function storagePanelUserEditing() {
+    var panel = document.getElementById("storagePanel");
+    if (!panel) return false;
+    var el = document.activeElement;
+    if (!el || !panel.contains(el)) return false;
+    return el.matches("input, textarea, select");
+  }
+
+  function bindTorrentDropZone(root) {
+    var zone = root && root.querySelector("#torrent-drop-zone");
+    if (!zone || zone.dataset.dropBound === "1") return;
+    zone.dataset.dropBound = "1";
+    var form = zone.querySelector("#torrent-upload-form");
+    var input = zone.querySelector("#torrent-file-input");
+    if (!form || !input) return;
+
+    function isTorrentFile(file) {
+      if (!file) return false;
+      var name = (file.name || "").toLowerCase();
+      return name.endsWith(".torrent") || file.type === "application/x-bittorrent";
+    }
+
+    function uploadFile(file) {
+      if (!isTorrentFile(file)) {
+        alert("Drop a .torrent file");
+        return;
+      }
+      var dt = new DataTransfer();
+      dt.items.add(file);
+      input.files = dt.files;
+      if (typeof htmx !== "undefined") htmx.trigger(form, "submit");
+      else form.requestSubmit();
+    }
+
+    ["dragenter", "dragover"].forEach(function (ev) {
+      zone.addEventListener(ev, function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        zone.classList.add("torrent-drop-zone-active");
+      });
+    });
+    ["dragleave", "drop"].forEach(function (ev) {
+      zone.addEventListener(ev, function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        zone.classList.remove("torrent-drop-zone-active");
+      });
+    });
+    zone.addEventListener("drop", function (e) {
+      var files = e.dataTransfer && e.dataTransfer.files;
+      if (files && files.length) uploadFile(files[0]);
+    });
+  }
+
+  function initStoragePanel(root) {
+    bindTorrentDropZone(root || document.getElementById("storagePanel"));
+  }
+
+  initStoragePanel(document.getElementById("storagePanel"));
+
+  document.body.addEventListener("htmx:afterSwap", function (e) {
+    if (e.detail.target.id === "storagePanel") {
+      initStoragePanel(e.detail.target);
+    }
+    if (e.detail.target.id !== "storagePanel") return;
+    var ok = document.querySelector("#storageActionResult .action-result.ok");
+    if (!ok) return;
+    var form = document.getElementById("samba-add-user-form");
+    if (form) form.reset();
+    var torrentInput = document.getElementById("torrent-file-input");
+    if (torrentInput) torrentInput.value = "";
+  });
+</script>
 {% endblock %}

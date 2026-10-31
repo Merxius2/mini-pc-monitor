@@ -28,6 +28,11 @@ from src.services import (
     stop_service,
 )
 from src.sleep_schedule import apply_schedule, get_schedule_status, set_schedule_enabled, suspend_now
+from src.system_updates import (
+    apply_system_updates,
+    get_system_updates_status,
+    refresh_system_updates,
+)
 
 router = APIRouter()
 
@@ -186,6 +191,18 @@ def host_metrics_partial(request: Request):
         request,
         "partials/host_metrics.html",
         {"host": host},
+    )
+
+
+@router.get("/partials/system-updates", response_class=HTMLResponse)
+def system_updates_partial(request: Request):
+    settings = _settings(request)
+    if not settings.system_updates.enabled:
+        raise HTTPException(status_code=404, detail="System updates disabled")
+    return _templates(request).TemplateResponse(
+        request,
+        "partials/system_updates.html",
+        {"updates": get_system_updates_status(settings.system_updates)},
     )
 
 
@@ -354,6 +371,37 @@ def action_suspend_now(request: Request):
     settings = _settings(request)
     ok, message = suspend_now(settings.sleep_schedule)
     return _power_action_response(request, ok, message)
+
+
+def _management_updates_action_response(request: Request, ok: bool, message: str):
+    if request.headers.get("HX-Request"):
+        return _templates(request).TemplateResponse(
+            request,
+            "partials/action_result.html",
+            {"ok": ok, "message": message},
+            headers={"HX-Trigger": "refreshSystemUpdates"},
+        )
+    if not ok:
+        raise HTTPException(status_code=500, detail=message)
+    return RedirectResponse("/management", status_code=303)
+
+
+@router.post("/actions/system-updates-refresh")
+def action_system_updates_refresh(request: Request):
+    settings = _settings(request)
+    if not settings.system_updates.enabled:
+        raise HTTPException(status_code=404, detail="System updates disabled")
+    ok, message, _ = refresh_system_updates(settings.system_updates)
+    return _management_updates_action_response(request, ok, message)
+
+
+@router.post("/actions/system-updates-apply")
+def action_system_updates_apply(request: Request):
+    settings = _settings(request)
+    if not settings.system_updates.enabled:
+        raise HTTPException(status_code=404, detail="System updates disabled")
+    ok, message, _ = apply_system_updates(settings.system_updates)
+    return _management_updates_action_response(request, ok, message)
 
 
 def _storage_action_response(request: Request, ok: bool, message: str):

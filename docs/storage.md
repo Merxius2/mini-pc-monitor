@@ -21,7 +21,8 @@ bash scripts/install-dashboard-service.sh  # restart dashboard after pull
 ## Torrents
 
 - Client: `transmission-daemon.service` (toggle on **Services**)
-- Completed files: `/mnt/storage/downloads/complete`
+- Completed files: `/mnt/storage/shared/Downloads` (visible on the Samba share as the **Downloads** folder)
+- Incomplete data stays outside the share: `/mnt/storage/downloads/incomplete`
 - Upload `.torrent` files or magnet links on the dashboard.
 - RPC password: `/etc/mini-pc-monitor/transmission-rpc-password` (readable by `sylvester`).
 

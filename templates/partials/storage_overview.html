@@ -74,10 +74,12 @@
     </div>
     <div>
       <h3 class="storage-subhead">Add user</h3>
-      <form class="storage-form"
+      <form id="samba-add-user-form"
+            class="storage-form"
             hx-post="/actions/samba-add-user"
             hx-target="#storageActionResult"
-            hx-swap="innerHTML">
+            hx-swap="innerHTML"
+            hx-preserve="true">
         <label>Username<input name="username" required pattern="[a-z][a-z0-9_-]{0,31}" autocomplete="username" /></label>
         <label>Password<input name="password" type="password" required minlength="8" autocomplete="new-password" /></label>
         <button type="submit" class="btn">Create Samba user</button>
@@ -97,21 +99,32 @@
   {% if tx.rpc_error %}
   <p class="action-log-empty mono">{{ tx.rpc_error }}</p>
   {% endif %}
-  <p class="detail">Downloads: <span class="mono">{{ tx.download_dir }}</span> · toggle <code>transmission-daemon.service</code> on Services</p>
+  <p class="detail">
+    Completed files: <span class="mono">{{ tx.download_dir }}</span>
+    · in Samba open <strong>Downloads</strong> under <code>{{ samba.unc_path }}</code>
+    · toggle <code>transmission-daemon.service</code> on Services
+  </p>
+  <p class="detail torrent-tracker-hint">If a torrent shows <strong>Tracker HTTP 403</strong>, the file was added successfully — the tracker rejected the announce (private/expired torrent, passkey, or dead site). Use a fresh torrent or magnet from a source you have access to.</p>
 
   <div class="storage-two-col storage-upload-row">
-    <form class="storage-form"
-          hx-post="/actions/torrent-upload"
-          hx-encoding="multipart/form-data"
-          hx-target="#storageActionResult"
-          hx-swap="innerHTML">
-      <label>Upload .torrent<input type="file" name="torrent_file" accept=".torrent,application/x-bittorrent" required /></label>
-      <button type="submit" class="btn">Add torrent</button>
-    </form>
-    <form class="storage-form"
+    <div id="torrent-drop-zone" class="torrent-drop-zone">
+      <form id="torrent-upload-form"
+            class="storage-form"
+            hx-post="/actions/torrent-upload"
+            hx-encoding="multipart/form-data"
+            hx-target="#storageActionResult"
+            hx-swap="innerHTML">
+        <p class="torrent-drop-label"><strong>Drop .torrent here</strong> or choose a file</p>
+        <label class="torrent-drop-file-label">Upload .torrent<input id="torrent-file-input" type="file" name="torrent_file" accept=".torrent,application/x-bittorrent" required /></label>
+        <button type="submit" class="btn">Add torrent</button>
+      </form>
+    </div>
+    <form id="torrent-magnet-form"
+          class="storage-form"
           hx-post="/actions/torrent-add-magnet"
           hx-target="#storageActionResult"
-          hx-swap="innerHTML">
+          hx-swap="innerHTML"
+          hx-preserve="true">
       <label>Magnet link<input name="magnet" type="url" placeholder="magnet:?xt=..." required /></label>
       <button type="submit" class="btn btn-sm">Add magnet</button>
     </form>
@@ -134,7 +147,11 @@
         <tr>
           <td>
             <strong>{{ t.name }}</strong>
-            {% if t.error %}<span class="detail mono">{{ t.error }}</span>{% endif %}
+            {% if t.error %}
+            <span class="detail mono torrent-row-error" title="From Transmission (often tracker or disk permissions, not the dashboard upload)">
+              {% if 'Tracker HTTP' in t.error or 'tracker' in t.error.lower() %}Tracker: {% endif %}{{ t.error }}
+            </span>
+            {% endif %}
             <span class="detail">{{ t.size_human }} · ETA {{ t.eta }}</span>
           </td>
           <td>

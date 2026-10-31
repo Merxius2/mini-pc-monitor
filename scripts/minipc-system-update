@@ -1,0 +1,66 @@
+#!/bin/bash
+# Apt status / refresh / upgrade for Mini-PC Monitor (passwordless sudo).
+set -euo pipefail
+
+status_json() {
+  python3 <<'PY'
+import json
+import subprocess
+from pathlib import Path
+
+reboot_required = Path("/var/run/reboot-required").is_file()
+reboot_hint = None
+pkgs_file = Path("/var/run/reboot-required.pkgs")
+if pkgs_file.is_file():
+    reboot_hint = pkgs_file.read_text(encoding="utf-8", errors="replace").strip()
+
+proc = subprocess.run(
+    ["apt", "list", "--upgradable"],
+    capture_output=True,
+    text=True,
+    check=False,
+)
+packages: list[dict[str, str]] = []
+for line in (proc.stdout or "").splitlines():
+    if not line or line.startswith("Listing"):
+        continue
+    parts = line.split()
+    if len(parts) < 2:
+        continue
+    name = parts[0].split("/")[0]
+    version = parts[1]
+    packages.append({"name": name, "version": version})
+
+print(
+    json.dumps(
+        {
+            "ok": proc.returncode == 0,
+            "count": len(packages),
+            "packages": packages,
+            "reboot_required": reboot_required,
+            "reboot_hint": reboot_hint,
+        }
+    )
+)
+PY
+}
+
+case "${1:-}" in
+  status)
+    status_json
+    ;;
+  refresh)
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update -qq
+    status_json
+    ;;
+  upgrade)
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get upgrade -y
+    status_json
+    ;;
+  *)
+    echo "Usage: $0 status|refresh|upgrade" >&2
+    exit 1
+    ;;
+esac

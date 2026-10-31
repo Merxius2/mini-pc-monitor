@@ -23,15 +23,15 @@ sudo usermod -aG "$GROUP" "$USER"
 sudo usermod -aG "$GROUP" debian-transmission 2>/dev/null || true
 
 sudo mkdir -p \
-  "$MOUNT/shared" \
-  "$MOUNT/downloads/complete" \
+  "$MOUNT/shared/Downloads" \
   "$MOUNT/downloads/incomplete" \
   "$MOUNT/torrents/watch" \
   "$MOUNT/quarantine" \
   "$MOUNT/logs"
 sudo chown -R "$USER:$GROUP" "$MOUNT/shared" "$MOUNT/torrents" "$MOUNT/logs"
-sudo chown -R debian-transmission:"$GROUP" "$MOUNT/downloads" "$MOUNT/quarantine"
+sudo chown -R debian-transmission:"$GROUP" "$MOUNT/shared/Downloads" "$MOUNT/downloads" "$MOUNT/quarantine"
 sudo chmod -R g+rwX "$MOUNT/shared" "$MOUNT/downloads" "$MOUNT/torrents" "$MOUNT/quarantine" "$MOUNT/logs"
+sudo chmod g+s "$MOUNT/shared/Downloads"
 
 sudo cp "$ROOT/scripts/minipc-samba-admin" /usr/local/sbin/
 sudo chmod 755 /usr/local/sbin/minipc-samba-admin
@@ -66,7 +66,7 @@ data = {}
 if path.is_file():
     data = json.loads(path.read_text())
 data.update({
-    "download-dir": "$MOUNT/downloads/complete",
+    "download-dir": "$MOUNT/shared/Downloads",
     "incomplete-dir": "$MOUNT/downloads/incomplete",
     "watch-dir": "$MOUNT/torrents/watch",
     "umask": 2,

@@ -16,13 +16,14 @@ def _run(cmd: list[str]) -> subprocess.CompletedProcess[str]:
 def _human_bytes(n: int) -> str:
     if n < 0:
         return "—"
+    value = float(n)
     for unit in ("B", "KB", "MB", "GB", "TB"):
-        if n < 1024 or unit == "TB":
+        if value < 1024 or unit == "TB":
             if unit == "B":
-                return f"{n} {unit}"
-            return f"{n / 1024:.1f} {unit}"
-        n //= 1024
-    return str(n)
+                return f"{int(value)} {unit}"
+            return f"{value:.1f} {unit}"
+        value /= 1024
+    return f"{value:.1f} PB"
 
 
 def _parse_mdstat(text: str) -> dict[str, Any]:

@@ -123,7 +123,7 @@ transmission:
   rpc_url: http://127.0.0.1:9091/transmission/rpc
   rpc_username: transmission
   rpc_password_file: /etc/mini-pc-monitor/transmission-rpc-password
-  download_dir: /mnt/storage/downloads/complete
+  download_dir: /mnt/storage/shared/Downloads
   incomplete_dir: /mnt/storage/downloads/incomplete
   watch_dir: /mnt/storage/torrents/watch
 
@@ -132,6 +132,11 @@ clamav:
   daemon_unit: clamav-daemon.service
   freshclam_unit: clamav-freshclam.service
   scan_log: /mnt/storage/logs/clamav-scan.log
+
+system_updates:
+  enabled: true
+  helper_script: /usr/local/sbin/minipc-system-update
+  max_packages_shown: 12
 
 azerothcore:
   enabled: true
