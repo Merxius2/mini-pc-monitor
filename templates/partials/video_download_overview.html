@@ -1,0 +1,79 @@
+{% set vd = video_download %}
+
+<section class="panel storage-section" id="video-download-form-section">
+  <div class="panel-header">
+    Download from URL
+    <span class="tag {% if vd.yt_dlp_ok %}would_hold{% else %}would_sell{% endif %}">
+      {% if vd.yt_dlp_ok %}yt-dlp ready{% else %}yt-dlp missing{% endif %}
+    </span>
+  </div>
+
+  {% if not vd.yt_dlp_ok %}
+  <p class="action-log-empty">{{ vd.yt_dlp_error or "Install yt-dlp on the mini-PC (pip install -r requirements.txt)." }}</p>
+  {% endif %}
+
+  <p class="detail">
+    Allowed sites:
+    {% for host in vd.allowed_hosts %}<code>{{ host }}</code>{% if not loop.last %}, {% endif %}{% endfor %}
+    · Save folder: <span class="mono">{{ vd.download_dir }}</span>
+    {% if vd.yt_dlp_version %} · {{ vd.yt_dlp_version }}{% endif %}
+  </p>
+
+  <form id="video-download-form"
+        class="storage-form"
+        hx-post="/actions/video-download"
+        hx-target="#videoDownloadActionResult"
+        hx-swap="innerHTML">
+    <label for="video-url">Video page URL</label>
+    <input type="url"
+           id="video-url"
+           name="url"
+           required
+           placeholder="https://www.youporn.com/watch/..."
+           autocomplete="off"
+           spellcheck="false" />
+    <button type="submit" class="btn btn-primary" {% if not vd.yt_dlp_ok %}disabled{% endif %}>Download</button>
+  </form>
+</section>
+
+<section class="panel storage-section" id="video-download-jobs">
+  <div class="panel-header">
+    Jobs
+    {% if vd.active_jobs %}
+    <span class="tag would_wait">{{ vd.active_jobs }} active</span>
+    {% endif %}
+  </div>
+  {% if vd.jobs %}
+  <ul class="storage-user-list">
+    {% for job in vd.jobs %}
+    <li>
+      <span class="mono" title="{{ job.url }}">{{ job.url | truncate(72, True) }}</span>
+      <span class="tag {% if job.status == 'done' %}would_hold{% elif job.status == 'error' %}would_sell{% else %}would_wait{% endif %}">
+        {{ job.status }}
+      </span>
+      {% if job.message %}
+      <span class="detail">{{ job.message }}</span>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="action-log-empty">No downloads yet — paste a URL above.</p>
+  {% endif %}
+</section>
+
+<section class="panel storage-section" id="video-download-files">
+  <div class="panel-header">Recent files</div>
+  {% if vd.recent_files %}
+  <ul class="storage-user-list">
+    {% for f in vd.recent_files %}
+    <li>
+      <span class="mono">{{ f.name }}</span>
+      <span class="detail">{{ f.size }} · {{ f.modified }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="action-log-empty">No video files in the download folder yet.</p>
+  {% endif %}
+</section>

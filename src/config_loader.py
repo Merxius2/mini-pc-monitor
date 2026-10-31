@@ -162,6 +162,18 @@ class SystemUpdatesConfig:
 
 
 @dataclass
+class VideoDownloadConfig:
+    enabled: bool = True
+    download_dir: str = "/mnt/storage/shared/Downloads/videos"
+    allowed_hosts: list[str] = field(
+        default_factory=lambda: ["youporn.com", "www.youporn.com"]
+    )
+    yt_dlp_command: str = ""
+    download_timeout_seconds: int = 3600
+    max_recent_files: int = 15
+
+
+@dataclass
 class ClamAvConfig:
     enabled: bool = True
     daemon_unit: str = "clamav-daemon.service"
@@ -196,6 +208,7 @@ class Settings:
     transmission: TransmissionConfig = field(default_factory=TransmissionConfig)
     clamav: ClamAvConfig = field(default_factory=ClamAvConfig)
     system_updates: SystemUpdatesConfig = field(default_factory=SystemUpdatesConfig)
+    video_download: VideoDownloadConfig = field(default_factory=VideoDownloadConfig)
 
 
 def load_settings(path: Path | None = None) -> Settings:
@@ -212,6 +225,7 @@ def load_settings(path: Path | None = None) -> Settings:
     transmission = TransmissionConfig(**data.get("transmission", {}))
     clamav = ClamAvConfig(**data.get("clamav", {}))
     system_updates = SystemUpdatesConfig(**data.get("system_updates", {}))
+    video_download = VideoDownloadConfig(**data.get("video_download", {}))
     process_labels = [ProcessLabelRule(**r) for r in data.get("process_labels", [])]
     return Settings(
         server=ServerConfig(**data.get("server", {})),
@@ -229,6 +243,7 @@ def load_settings(path: Path | None = None) -> Settings:
         transmission=transmission,
         clamav=clamav,
         system_updates=system_updates,
+        video_download=video_download,
     )
 
 

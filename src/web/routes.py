@@ -33,6 +33,7 @@ from src.system_updates import (
     get_system_updates_status,
     refresh_system_updates,
 )
+from src.video_download import get_video_download_status, start_download
 
 router = APIRouter()
 
@@ -159,6 +160,59 @@ def storage_overview_partial(request: Request):
         "partials/storage_overview.html",
         _storage_context(settings),
     )
+
+
+def _video_download_context(settings) -> dict:
+    return {"video_download": get_video_download_status(settings.video_download)}
+
+
+@router.get("/tools/video-download", response_class=HTMLResponse)
+def video_download_page(request: Request):
+    settings = _settings(request)
+    if not settings.video_download.enabled:
+        raise HTTPException(status_code=404, detail="Video download disabled")
+    vd_ctx = _video_download_context(settings)
+    ctx = {
+        "page_title": "Video download",
+        "active_nav": "video_download",
+        "status": _layout_context(settings),
+        **vd_ctx,
+    }
+    return _templates(request).TemplateResponse(request, "video_download.html", ctx)
+
+
+@router.get("/partials/video-download-overview", response_class=HTMLResponse)
+def video_download_overview_partial(request: Request):
+    settings = _settings(request)
+    if not settings.video_download.enabled:
+        raise HTTPException(status_code=404, detail="Video download disabled")
+    return _templates(request).TemplateResponse(
+        request,
+        "partials/video_download_overview.html",
+        _video_download_context(settings),
+    )
+
+
+def _video_download_action_response(request: Request, ok: bool, message: str):
+    if request.headers.get("HX-Request"):
+        return _templates(request).TemplateResponse(
+            request,
+            "partials/action_result.html",
+            {"ok": ok, "message": message},
+            headers={"HX-Trigger": "refreshVideoDownload"},
+        )
+    if not ok:
+        raise HTTPException(status_code=400, detail=message)
+    return RedirectResponse("/tools/video-download", status_code=303)
+
+
+@router.post("/actions/video-download")
+def action_video_download(request: Request, url: str = Form(...)):
+    settings = _settings(request)
+    if not settings.video_download.enabled:
+        raise HTTPException(status_code=404, detail="Video download disabled")
+    ok, message, _job_id = start_download(url, settings.video_download)
+    return _video_download_action_response(request, ok, message)
 
 
 @router.get("/storage/samba-qr.png")

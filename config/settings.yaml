@@ -138,6 +138,15 @@ system_updates:
   helper_script: /usr/local/sbin/minipc-system-update
   max_packages_shown: 12
 
+video_download:
+  enabled: true
+  download_dir: /mnt/storage/shared/Downloads/videos
+  allowed_hosts:
+    - youporn.com
+    - www.youporn.com
+  download_timeout_seconds: 3600
+  max_recent_files: 15
+
 azerothcore:
   enabled: true
   label: AzerothCore WoW Server

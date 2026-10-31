@@ -5,3 +5,4 @@ PyYAML>=6.0
 psutil>=5.9
 python-multipart>=0.0.9
 segno>=1.6,<2
+yt-dlp>=2024.10,<2027

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="top-bar">
+  <div>
+    <h2>Video download</h2>
+    <p>Paste a YouPorn page URL — the mini-PC saves the file to RAID storage via <code>yt-dlp</code>.</p>
+  </div>
+</div>
+
+<div id="videoDownloadActionResult"></div>
+
+<div id="videoDownloadPanel"
+     hx-get="/partials/video-download-overview"
+     hx-trigger="load, every 5s [!videoDownloadUserEditing()], refreshVideoDownload from:body"
+     hx-swap="innerHTML">
+  {% include "partials/video_download_overview.html" %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function videoDownloadUserEditing() {
+    var panel = document.getElementById("videoDownloadPanel");
+    if (!panel) return false;
+    var el = document.activeElement;
+    if (!el || !panel.contains(el)) return false;
+    return el.matches("input, textarea, select");
+  }
+
+  document.body.addEventListener("htmx:afterSwap", function (e) {
+    if (e.detail.target.id !== "videoDownloadPanel") return;
+    var ok = document.querySelector("#videoDownloadActionResult .action-result.ok");
+    if (!ok) return;
+    var form = document.getElementById("video-download-form");
+    if (form) form.reset();
+  });
+</script>
+{% endblock %}
