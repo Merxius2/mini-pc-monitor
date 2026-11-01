@@ -32,7 +32,36 @@
     var ok = document.querySelector("#storageActionResult .action-result.ok");
     if (!ok) return;
     var form = document.getElementById("samba-add-user-form");
-    if (form) form.reset();
+    if (form) {
+      form.reset();
+      resetSambaNewAccessToggle(form);
+    }
+  });
+
+  function syncSambaNewAccessToggle(wrap, writeEnabled) {
+    if (!wrap) return;
+    var hidden = wrap.closest("form") && wrap.closest("form").querySelector('input[name="access"]');
+    var btn = wrap.querySelector(".samba-new-access-toggle");
+    var readLabel = wrap.querySelector('[data-side="read"]');
+    var writeLabel = wrap.querySelector('[data-side="write"]');
+    if (btn) btn.setAttribute("aria-checked", writeEnabled ? "true" : "false");
+    if hidden) hidden.value = writeEnabled ? "write" : "read";
+    if (readLabel) readLabel.classList.toggle("on", !writeEnabled);
+    if (writeLabel) writeLabel.classList.toggle("on", writeEnabled);
+  }
+
+  function resetSambaNewAccessToggle(form) {
+    var wrap = form && form.querySelector(".samba-new-access-row .samba-access-toggle-wrap");
+    syncSambaNewAccessToggle(wrap, true);
+  }
+
+  document.body.addEventListener("click", function (e) {
+    var btn = e.target.closest(".samba-new-access-toggle");
+    if (!btn) return;
+    e.preventDefault();
+    var wrap = btn.closest(".samba-access-toggle-wrap");
+    var writeEnabled = btn.getAttribute("aria-checked") !== "true";
+    syncSambaNewAccessToggle(wrap, writeEnabled);
   });
 </script>
 {% endblock %}

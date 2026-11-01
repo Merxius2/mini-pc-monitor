@@ -86,23 +86,24 @@
             <span class="tag samba-access-tag {% if u.access == 'read' %}would_wait{% else %}would_hold{% endif %}">{{ u.access_label }}</span>
           </div>
           <div class="samba-user-actions">
-            <form class="inline-form samba-access-form"
-                  hx-post="/actions/samba-set-access"
-                  hx-target="#storageActionResult"
-                  hx-swap="innerHTML"
-                  hx-trigger="change from:input[type=radio]">
-              <input type="hidden" name="username" value="{{ u.username }}" />
-              <div class="format-segment samba-access-segment" role="radiogroup" aria-label="Access for {{ u.username }}">
-                <label class="format-segment-option">
-                  <input type="radio" name="access" value="write" {% if u.access == 'write' %}checked{% endif %} />
-                  <span>Write</span>
-                </label>
-                <label class="format-segment-option">
-                  <input type="radio" name="access" value="read" {% if u.access == 'read' %}checked{% endif %} />
-                  <span>Read-only</span>
-                </label>
-              </div>
-            </form>
+            <div class="bot-toggle-wrap samba-access-toggle-wrap">
+              <span class="bot-toggle-label samba-access-side {% if u.access == 'read' %}on{% endif %}">Read-only</span>
+              <form class="inline-form samba-access-form"
+                    hx-post="/actions/samba-set-access"
+                    hx-target="#storageActionResult"
+                    hx-swap="innerHTML">
+                <input type="hidden" name="username" value="{{ u.username }}" />
+                <input type="hidden" name="access" value="{{ 'read' if u.access == 'write' else 'write' }}" />
+                <button type="submit"
+                        class="bot-toggle service-toggle samba-access-toggle"
+                        aria-checked="{{ 'true' if u.access == 'write' else 'false' }}"
+                        aria-label="{% if u.access == 'write' %}Switch {{ u.username }} to read-only{% else %}Allow write access for {{ u.username }}{% endif %}"
+                        title="{% if u.access == 'write' %}Read-only{% else %}Read &amp; write{% endif %}">
+                  <span class="bot-toggle-knob"></span>
+                </button>
+              </form>
+              <span class="bot-toggle-label samba-access-side {% if u.access == 'write' %}on{% endif %}">Write</span>
+            </div>
             <form class="inline-form"
                   hx-post="/actions/samba-remove-user"
                   hx-target="#storageActionResult"
@@ -129,19 +130,20 @@
             hx-preserve="true">
         <label>Username<input name="username" required pattern="[a-z][a-z0-9_-]{0,31}" autocomplete="username" /></label>
         <label>Password<input name="password" type="password" required minlength="8" autocomplete="new-password" /></label>
-        <fieldset class="samba-new-access">
-          <legend>Access</legend>
-          <div class="format-segment samba-access-segment">
-            <label class="format-segment-option">
-              <input type="radio" name="access" value="write" checked />
-              <span>Read &amp; write</span>
-            </label>
-            <label class="format-segment-option">
-              <input type="radio" name="access" value="read" />
-              <span>Read-only</span>
-            </label>
+        <div class="samba-new-access-row">
+          <span class="detail">Access</span>
+          <div class="bot-toggle-wrap samba-access-toggle-wrap" id="sambaNewAccessToggle">
+            <span class="bot-toggle-label samba-access-side" data-side="read">Read-only</span>
+            <button type="button"
+                    class="bot-toggle service-toggle samba-access-toggle samba-new-access-toggle"
+                    aria-checked="true"
+                    aria-label="Toggle write access for new user">
+              <span class="bot-toggle-knob"></span>
+            </button>
+            <span class="bot-toggle-label samba-access-side on" data-side="write">Write</span>
           </div>
-        </fieldset>
+          <input type="hidden" name="access" value="write" />
+        </div>
         <button type="submit" class="btn">Create Samba user</button>
       </form>
       <p class="detail">Creates a Samba-only account. Read-only users can browse and download but not change files on the share.</p>

@@ -2271,31 +2271,37 @@
     gap: 0.45rem;
   }
 
-  .samba-access-form {
-    flex: 1 1 auto;
-    min-width: 0;
+  .samba-access-toggle-wrap {
+    gap: 0.45rem;
   }
 
-  .samba-access-segment {
-    width: 100%;
-    max-width: 16rem;
-  }
-
-  .samba-access-segment .format-segment-option span {
+  .samba-access-toggle-wrap .samba-access-side {
+    min-width: 4.5rem;
+    text-align: center;
     font-size: 0.72rem;
-    padding: 0.35rem 0.5rem;
   }
 
-  .samba-new-access {
-    margin: 0.35rem 0 0.5rem;
-    padding: 0;
-    border: none;
+  .samba-access-toggle-wrap .samba-access-side.on {
+    color: var(--cyan);
   }
 
-  .samba-new-access legend {
-    font-size: 0.78rem;
-    color: rgba(255, 255, 255, 0.55);
-    margin-bottom: 0.35rem;
+  .samba-access-toggle-wrap .samba-access-side.on:last-child {
+    color: var(--green);
+  }
+
+  .samba-user-actions .samba-access-form {
+    flex: 0 0 auto;
+  }
+
+  .samba-new-access-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin: 0.35rem 0 0.65rem;
+  }
+
+  .samba-new-access-row .detail {
+    margin: 0;
   }
 
   .storage-upload-row { align-items: start; }
