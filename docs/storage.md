@@ -21,7 +21,7 @@ bash scripts/install-dashboard-service.sh  # restart dashboard after pull
 - Share name: `storage`
 - UNC: `//192.168.1.30/storage`
 - Connect URL (QR on dashboard): `smb://192.168.1.30/storage` — **RAID storage** page shows a scannable PNG at `/storage/samba-qr.png`
-- Users are created on the **RAID storage** page (Samba-only accounts, no SSH login).
+- Users are created on the **RAID storage** page (Samba-only accounts, no SSH login). Set each user to **Read & write** or **Read-only** (Samba `read list`, stored in `/etc/mini-pc-monitor/samba-access.json`).
 
 ## Torrents
 
@@ -37,7 +37,7 @@ bash scripts/install-dashboard-service.sh  # restart dashboard after pull
 - Log: `/mnt/storage/logs/clamav-scan.log`
 - AppArmor must allow the hook: `scripts/apparmor-transmission-daemon-local` → `/etc/apparmor.d/local/transmission-daemon` (re-run `install-storage-stack.sh` if scans never log)
 - Manual scans from the dashboard use `/usr/local/sbin/minipc-clamscan-admin` (`downloads` or `shared`); install via `install-storage-stack.sh` (sudoers in `minipc-monitor-sudoers`)
-- **Full scan schedule** on the **RAID storage** page: `minipc-clamscan-full.timer` → `minipc-clamscan-full.service` (daily time + scope via systemd drop-ins)
+- **Full scan schedule** on the **RAID storage** page: `minipc-clamscan-full.timer` → `minipc-clamscan-full.service` (time, weekdays, and scope via systemd drop-ins)
 - **Scan history**: `/mnt/storage/logs/clamav-scan-history.jsonl` (one JSON line per completed full scan — manual or scheduled)
 - `clamd` reads files as user `clamav` — member of `storage-apps`, and AppArmor local rule `apparmor-clamd-local` allows read under `/mnt/storage`
 - Directory scans use `find` + `clamdscan` (`clamdscan` alone does **not** recurse into folders). Large libraries take a long time; the log shows `OK: clean (N files scanned)` when done

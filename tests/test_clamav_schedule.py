@@ -5,16 +5,55 @@ from pathlib import Path
 from unittest.mock import patch
 
 from src.clamav import list_scan_history
-from src.clamav_schedule import apply_clamav_schedule, get_clamav_schedule_status
+from src.clamav_schedule import (
+    apply_clamav_schedule,
+    format_days_label,
+    get_clamav_schedule_status,
+    parse_timer_dropin,
+    timer_dropin_content,
+)
 from src.config_loader import ClamAvConfig, ClamAvScheduleConfig
 
 
 class ClamAvScheduleTests(unittest.TestCase):
     def test_apply_rejects_bad_time(self) -> None:
         config = ClamAvConfig()
-        ok, msg = apply_clamav_schedule(config, time_str="25:99", scope="shared")
+        ok, msg = apply_clamav_schedule(
+            config, time_str="25:99", scope="shared", days=["mon"]
+        )
         self.assertFalse(ok)
         self.assertIn("24-hour", msg)
+
+    def test_apply_requires_days(self) -> None:
+        config = ClamAvConfig()
+        ok, msg = apply_clamav_schedule(config, time_str="03:30", scope="shared", days=[])
+        self.assertFalse(ok)
+        self.assertIn("at least one day", msg.lower())
+
+    def test_timer_dropin_weekdays(self) -> None:
+        content = timer_dropin_content("04:00", ["mon", "wed", "fri"])
+        self.assertIn("OnCalendar=Mon *-*-* 04:00:00", content)
+        self.assertIn("OnCalendar=Wed *-*-* 04:00:00", content)
+        self.assertNotIn("Tue", content)
+
+    def test_timer_dropin_every_day(self) -> None:
+        content = timer_dropin_content("03:30", ["mon", "tue", "wed", "thu", "fri", "sat", "sun"])
+        self.assertIn("OnCalendar=*-*-* 03:30:00", content)
+
+    def test_parse_timer_dropin(self) -> None:
+        text = (
+            "[Timer]\n"
+            "OnCalendar=\n"
+            "OnCalendar=Mon *-*-* 04:15:00\n"
+            "OnCalendar=Fri *-*-* 04:15:00\n"
+        )
+        time_str, days = parse_timer_dropin(text)
+        self.assertEqual(time_str, "04:15")
+        self.assertEqual(days, ["mon", "fri"])
+
+    def test_format_days_label(self) -> None:
+        self.assertEqual(format_days_label(["mon", "tue", "wed", "thu", "fri", "sat", "sun"]), "Every day")
+        self.assertEqual(format_days_label(["sat", "sun"]), "Sat, Sun")
 
     def test_status_reads_drop_in(self) -> None:
         config = ClamAvConfig(
@@ -28,14 +67,15 @@ class ClamAvScheduleTests(unittest.TestCase):
                 "UnitFileState": "enabled",
                 "NextElapseUSecRealtime": "Mon 2026-11-02 03:30:00 CET",
             }
-            with patch("src.clamav_schedule._read_drop_in") as drop_in:
-                drop_in.return_value = ("04:15", None)
+            with patch("src.clamav_schedule._read_timer_drop_in") as drop_in:
+                drop_in.return_value = ("04:15", ["mon", "wed"])
                 with patch("src.clamav_schedule._read_service_scope") as scope:
                     scope.return_value = "downloads"
                     status = get_clamav_schedule_status(config)
         self.assertTrue(status["enabled"])
         self.assertEqual(status["time"], "04:15")
         self.assertEqual(status["scope"], "downloads")
+        self.assertEqual(status["days"], ["mon", "wed"])
 
 
 class ClamAvHistoryTests(unittest.TestCase):

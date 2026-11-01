@@ -48,9 +48,13 @@ sudo systemctl daemon-reload
 
 sudo mkdir -p /etc/samba/smb.d
 sudo cp "$ROOT/scripts/samba-storage.conf" /etc/samba/smb.d/storage.conf
+sudo cp "$ROOT/scripts/samba-storage-access.conf" /etc/samba/smb.d/storage-access.conf
 sudo sed -i '/include = \/etc\/samba\/smb.d/d' /etc/samba/smb.conf
 if ! grep -q 'include = /etc/samba/smb.d/storage.conf' /etc/samba/smb.conf 2>/dev/null; then
   sudo sed -i '/^\[global\]/a \\   include = /etc/samba/smb.d/storage.conf' /etc/samba/smb.conf
+fi
+if ! grep -q 'include = /etc/samba/smb.d/storage-access.conf' /etc/samba/smb.conf 2>/dev/null; then
+  sudo sed -i '/include = \/etc\/samba\/smb.d\/storage.conf/a \\   include = /etc/samba/smb.d/storage-access.conf' /etc/samba/smb.conf
 fi
 
 sudo mkdir -p "$SECRETS_DIR"

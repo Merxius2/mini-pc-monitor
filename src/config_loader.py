@@ -194,11 +194,16 @@ class VideoDownloadConfig:
             )
 
 
+def _default_clamav_schedule_days() -> list[str]:
+    return ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+
+
 @dataclass
 class ClamAvScheduleConfig:
     manage: bool = True
     time: str = "03:30"
     scope: str = "shared"
+    days: list[str] = field(default_factory=_default_clamav_schedule_days)
     timer_unit: str = "minipc-clamscan-full.timer"
     service_unit: str = "minipc-clamscan-full.service"
 

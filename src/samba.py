@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import json
 import re
 import subprocess
-from typing import Any
+from typing import Any, Literal
 
 from src.config_loader import SambaConfig
+
+SambaAccess = Literal["read", "write"]
 
 
 def _run(cmd: list[str]) -> subprocess.CompletedProcess[str]:
@@ -34,23 +37,59 @@ def smb_connect_url(unc_path: str) -> str:
     return f"smb://{path.lstrip('/')}"
 
 
-def list_samba_users(config: SambaConfig) -> tuple[list[str], str | None]:
-    result = _admin(config, "list")
+def _parse_access(value: str) -> SambaAccess:
+    return "read" if value.strip().lower() == "read" else "write"
+
+
+def list_samba_users(config: SambaConfig) -> tuple[list[dict[str, Any]], str | None]:
+    result = _admin(config, "list-json")
     if result.returncode != 0:
         return [], (result.stderr or result.stdout or "list failed").strip()
-    users = [line.strip() for line in (result.stdout or "").splitlines() if line.strip()]
+    raw = (result.stdout or "").strip()
+    if not raw:
+        return [], None
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return [], "Invalid response from Samba admin"
+    if not isinstance(data, list):
+        return [], "Invalid response from Samba admin"
+    users: list[dict[str, Any]] = []
+    for row in data:
+        if not isinstance(row, dict):
+            continue
+        name = str(row.get("username") or "").strip()
+        if not name:
+            continue
+        access = _parse_access(str(row.get("access") or "write"))
+        users.append(
+            {
+                "username": name,
+                "access": access,
+                "access_label": "Read-only" if access == "read" else "Read & write",
+            }
+        )
     return users, None
 
 
-def add_samba_user(config: SambaConfig, username: str, password: str) -> tuple[bool, str]:
+def add_samba_user(
+    config: SambaConfig,
+    username: str,
+    password: str,
+    *,
+    access: SambaAccess = "write",
+) -> tuple[bool, str]:
     user = username.strip()
     if not re.fullmatch(r"[a-z][a-z0-9_-]{0,31}", user):
         return False, "Invalid username (lowercase letters, digits, _ - only)"
     if len(password) < 8:
         return False, "Password must be at least 8 characters"
-    result = _admin(config, "add", user, password)
+    if access not in ("read", "write"):
+        return False, "Access must be read or write"
+    result = _admin(config, "add", user, password, access)
     if result.returncode == 0:
-        return True, f"Added Samba user {user}"
+        label = "read-only" if access == "read" else "read & write"
+        return True, f"Added Samba user {user} ({label})"
     return False, (result.stderr or result.stdout or "add failed").strip()
 
 
@@ -62,6 +101,23 @@ def remove_samba_user(config: SambaConfig, username: str) -> tuple[bool, str]:
     if result.returncode == 0:
         return True, f"Removed Samba user {user}"
     return False, (result.stderr or result.stdout or "remove failed").strip()
+
+
+def set_samba_user_access(
+    config: SambaConfig,
+    username: str,
+    access: SambaAccess,
+) -> tuple[bool, str]:
+    user = username.strip()
+    if not re.fullmatch(r"[a-z][a-z0-9_-]{0,31}", user):
+        return False, "Invalid username"
+    if access not in ("read", "write"):
+        return False, "Access must be read or write"
+    result = _admin(config, "set-access", user, access)
+    if result.returncode == 0:
+        label = "read-only" if access == "read" else "read & write"
+        return True, f"{user} is now {label} on the share"
+    return False, (result.stderr or result.stdout or "set-access failed").strip()
 
 
 def get_samba_status(config: SambaConfig) -> dict[str, Any]:

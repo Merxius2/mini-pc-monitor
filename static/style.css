@@ -2246,6 +2246,58 @@
     border: 1px solid var(--border);
   }
 
+  .samba-user-list li {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.55rem;
+  }
+
+  .samba-user-main {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .samba-access-tag {
+    font-size: 0.68rem;
+  }
+
+  .samba-user-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.45rem;
+  }
+
+  .samba-access-form {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .samba-access-segment {
+    width: 100%;
+    max-width: 16rem;
+  }
+
+  .samba-access-segment .format-segment-option span {
+    font-size: 0.72rem;
+    padding: 0.35rem 0.5rem;
+  }
+
+  .samba-new-access {
+    margin: 0.35rem 0 0.5rem;
+    padding: 0;
+    border: none;
+  }
+
+  .samba-new-access legend {
+    font-size: 0.78rem;
+    color: rgba(255, 255, 255, 0.55);
+    margin-bottom: 0.35rem;
+  }
+
   .storage-upload-row { align-items: start; }
 
   .torrent-drop-zone {
@@ -2422,6 +2474,65 @@
 
   .clamav-schedule-form {
     margin-bottom: 0.5rem;
+  }
+
+  .clamav-days-fieldset {
+    margin: 0 1.15rem 0.65rem;
+    padding: 0.65rem 0.75rem 0.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+  }
+
+  .clamav-days-fieldset legend {
+    padding: 0 0.35rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .clamav-days-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .clamav-day-chip {
+    display: inline-flex;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .clamav-day-chip input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .clamav-day-chip span {
+    display: inline-block;
+    min-width: 2.4rem;
+    padding: 0.35rem 0.55rem;
+    border-radius: 6px;
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 255, 255, 0.55);
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  }
+
+  .clamav-day-chip input:checked + span {
+    background: rgba(61, 139, 253, 0.22);
+    border-color: rgba(61, 139, 253, 0.55);
+    color: #93c5fd;
+  }
+
+  .clamav-day-chip input:focus-visible + span {
+    outline: 2px solid rgba(61, 139, 253, 0.65);
+    outline-offset: 2px;
   }
 
   .clamav-history-wrap {

@@ -14,7 +14,13 @@ from src.clamav_schedule import apply_clamav_schedule, set_clamav_schedule_enabl
 from src.domoticz import get_domoticz_status
 from src.homeassistant import get_homeassistant_status
 from src.qr import qr_png_bytes
-from src.samba import add_samba_user, get_samba_status, remove_samba_user, smb_connect_url
+from src.samba import (
+    add_samba_user,
+    get_samba_status,
+    remove_samba_user,
+    set_samba_user_access,
+    smb_connect_url,
+)
 from src.storage import get_raid_status
 from src.transmission import get_transmission_status, transmission_client
 from src.config_loader import load_settings, loggable_service_units, manageable_service_units
@@ -608,9 +614,11 @@ def action_samba_add_user(
     request: Request,
     username: str = Form(...),
     password: str = Form(...),
+    access: str = Form(default="write"),
 ):
     settings = _settings(request)
-    ok, message = add_samba_user(settings.samba, username, password)
+    mode = "read" if access.strip().lower() == "read" else "write"
+    ok, message = add_samba_user(settings.samba, username, password, access=mode)  # type: ignore[arg-type]
     return _storage_action_response(request, ok, message)
 
 
@@ -618,6 +626,18 @@ def action_samba_add_user(
 def action_samba_remove_user(request: Request, username: str = Form(...)):
     settings = _settings(request)
     ok, message = remove_samba_user(settings.samba, username)
+    return _storage_action_response(request, ok, message)
+
+
+@router.post("/actions/samba-set-access")
+def action_samba_set_access(
+    request: Request,
+    username: str = Form(...),
+    access: str = Form(...),
+):
+    settings = _settings(request)
+    mode = "read" if access.strip().lower() == "read" else "write"
+    ok, message = set_samba_user_access(settings.samba, username, mode)  # type: ignore[arg-type]
     return _storage_action_response(request, ok, message)
 
 
@@ -721,6 +741,7 @@ def action_update_clamav_schedule(
     request: Request,
     scan_time: str = Form(...),
     scope: str = Form(...),
+    days: list[str] = Form(default=[]),
 ):
     settings = _settings(request)
     if not settings.clamav.enabled:
@@ -729,6 +750,7 @@ def action_update_clamav_schedule(
         settings.clamav,
         time_str=scan_time,
         scope=scope,
+        days=days,
     )
     return _storage_action_response(request, ok, message)
 

@@ -74,22 +74,44 @@
 
   <div class="storage-two-col">
     <div>
-      <h3 class="storage-subhead">Users</h3>
+      <h3 class="storage-subhead">Drive access</h3>
       {% if samba.users_error %}
       <p class="action-log-empty">{{ samba.users_error }}</p>
       {% elif samba.users %}
-      <ul class="storage-user-list">
+      <ul class="storage-user-list samba-user-list">
         {% for u in samba.users %}
         <li>
-          <span class="mono">{{ u }}</span>
-          <form class="inline-form"
-                hx-post="/actions/samba-remove-user"
-                hx-target="#storageActionResult"
-                hx-swap="innerHTML"
-                hx-confirm="Remove Samba user {{ u }}?">
-            <input type="hidden" name="username" value="{{ u }}" />
-            <button type="submit" class="btn btn-sm btn-danger">Remove</button>
-          </form>
+          <div class="samba-user-main">
+            <span class="mono">{{ u.username }}</span>
+            <span class="tag samba-access-tag {% if u.access == 'read' %}would_wait{% else %}would_hold{% endif %}">{{ u.access_label }}</span>
+          </div>
+          <div class="samba-user-actions">
+            <form class="inline-form samba-access-form"
+                  hx-post="/actions/samba-set-access"
+                  hx-target="#storageActionResult"
+                  hx-swap="innerHTML"
+                  hx-trigger="change from:input[type=radio]">
+              <input type="hidden" name="username" value="{{ u.username }}" />
+              <div class="format-segment samba-access-segment" role="radiogroup" aria-label="Access for {{ u.username }}">
+                <label class="format-segment-option">
+                  <input type="radio" name="access" value="write" {% if u.access == 'write' %}checked{% endif %} />
+                  <span>Write</span>
+                </label>
+                <label class="format-segment-option">
+                  <input type="radio" name="access" value="read" {% if u.access == 'read' %}checked{% endif %} />
+                  <span>Read-only</span>
+                </label>
+              </div>
+            </form>
+            <form class="inline-form"
+                  hx-post="/actions/samba-remove-user"
+                  hx-target="#storageActionResult"
+                  hx-swap="innerHTML"
+                  hx-confirm="Remove Samba user {{ u.username }}?">
+              <input type="hidden" name="username" value="{{ u.username }}" />
+              <button type="submit" class="btn btn-sm btn-danger">Remove</button>
+            </form>
+          </div>
         </li>
         {% endfor %}
       </ul>
@@ -107,9 +129,22 @@
             hx-preserve="true">
         <label>Username<input name="username" required pattern="[a-z][a-z0-9_-]{0,31}" autocomplete="username" /></label>
         <label>Password<input name="password" type="password" required minlength="8" autocomplete="new-password" /></label>
+        <fieldset class="samba-new-access">
+          <legend>Access</legend>
+          <div class="format-segment samba-access-segment">
+            <label class="format-segment-option">
+              <input type="radio" name="access" value="write" checked />
+              <span>Read &amp; write</span>
+            </label>
+            <label class="format-segment-option">
+              <input type="radio" name="access" value="read" />
+              <span>Read-only</span>
+            </label>
+          </div>
+        </fieldset>
         <button type="submit" class="btn">Create Samba user</button>
       </form>
-      <p class="detail">Creates a system account (no shell login) and Samba password for LAN file access.</p>
+      <p class="detail">Creates a Samba-only account. Read-only users can browse and download but not change files on the share.</p>
     </div>
   </div>
 </section>

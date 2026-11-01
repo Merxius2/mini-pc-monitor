@@ -8,7 +8,7 @@
     <h4>{% if sched.enabled %}Scheduled full scans active{% else %}Scheduled full scans off{% endif %}</h4>
     <p>
       {% if sched.enabled %}
-        Daily at <strong>{{ sched.time }}</strong> ·
+        <strong>{{ sched.days_label }}</strong> at <strong>{{ sched.time }}</strong> ·
         {% if sched.scope == 'shared' %}entire shared folder{% else %}Downloads folder{% endif %}
       {% else %}
         Enable to run a full library scan automatically (separate from per-torrent scans)
@@ -39,6 +39,11 @@
     <div class="sub">{{ sched.timer_unit }}</div>
   </div>
   <div class="schedule-card">
+    <div class="label">Days</div>
+    <div class="value">{{ sched.days_label }}</div>
+    <div class="sub">{{ sched.time }} local time</div>
+  </div>
+  <div class="schedule-card">
     <div class="label">Scope</div>
     <div class="value">{% if sched.scope == 'shared' %}Shared folder{% else %}Downloads{% endif %}</div>
     <div class="sub">{{ sched.service_unit }}</div>
@@ -64,6 +69,17 @@
     </label>
     <button type="submit" class="btn btn-primary">Save schedule</button>
   </div>
+  <fieldset class="clamav-days-fieldset">
+    <legend>Days</legend>
+    <div class="clamav-days-row">
+      {% for day in sched.day_options %}
+      <label class="clamav-day-chip">
+        <input type="checkbox" name="days" value="{{ day.value }}" {% if day.checked %}checked{% endif %} />
+        <span>{{ day.label }}</span>
+      </label>
+      {% endfor %}
+    </div>
+  </fieldset>
   <p class="schedule-form-hint">Updates systemd timer drop-ins. Large shared-folder scans can take hours.</p>
 </form>
 {% endif %}
