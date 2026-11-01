@@ -9,7 +9,7 @@ ACCESS_FILE="${MINIPC_SAMBA_ACCESS_FILE:-/etc/mini-pc-monitor/samba-access.json}
 ACCESS_CONF="${MINIPC_SAMBA_ACCESS_CONF:-/etc/samba/smb.d/storage-access.conf}"
 
 usage() {
-  echo "Usage: $0 list | list-json | add USER PASS [read|write] | remove USER | set-access USER read|write" >&2
+  echo "Usage: $0 list | list-json | add USER PASS [read|write] | remove USER | set-access USER read|write | set-password USER PASS" >&2
   exit 1
 }
 
@@ -227,6 +227,17 @@ path.parent.mkdir(parents=True, exist_ok=True)
 path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 PY
     apply_access_conf
+    ;;
+  set-password)
+    user="${2:-}"; pass="${3:-}"
+    valid_user "$user" || { echo "Invalid username" >&2; exit 1; }
+    [ -n "$pass" ] || { echo "Password required" >&2; exit 1; }
+    if ! smb_users | grep -Fxq "$user"; then
+      echo "Samba user not found: $user" >&2
+      exit 1
+    fi
+    printf '%s\n%s\n' "$pass" "$pass" | smbpasswd -s "$user"
+    smbpasswd -e "$user" >/dev/null
     ;;
   *)
     usage

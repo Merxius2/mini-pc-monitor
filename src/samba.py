@@ -103,6 +103,22 @@ def remove_samba_user(config: SambaConfig, username: str) -> tuple[bool, str]:
     return False, (result.stderr or result.stdout or "remove failed").strip()
 
 
+def set_samba_user_password(
+    config: SambaConfig,
+    username: str,
+    password: str,
+) -> tuple[bool, str]:
+    user = username.strip()
+    if not re.fullmatch(r"[a-z][a-z0-9_-]{0,31}", user):
+        return False, "Invalid username"
+    if len(password) < 8:
+        return False, "Password must be at least 8 characters"
+    result = _admin(config, "set-password", user, password)
+    if result.returncode == 0:
+        return True, f"Password updated for {user}"
+    return False, (result.stderr or result.stdout or "set-password failed").strip()
+
+
 def set_samba_user_access(
     config: SambaConfig,
     username: str,

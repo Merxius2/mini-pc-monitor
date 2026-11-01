@@ -36,6 +36,11 @@
       form.reset();
       resetSambaNewAccessToggle(form);
     }
+    document.querySelectorAll(".samba-password-panel[open] .samba-password-form").forEach(function (pwForm) {
+      pwForm.reset();
+      var panel = pwForm.closest(".samba-password-panel");
+      if (panel) panel.open = false;
+    });
   });
 
   function syncSambaNewAccessToggle(wrap, writeEnabled) {

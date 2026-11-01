@@ -19,6 +19,7 @@ from src.samba import (
     get_samba_status,
     remove_samba_user,
     set_samba_user_access,
+    set_samba_user_password,
     smb_connect_url,
 )
 from src.storage import get_raid_status
@@ -638,6 +639,17 @@ def action_samba_set_access(
     settings = _settings(request)
     mode = "read" if access.strip().lower() == "read" else "write"
     ok, message = set_samba_user_access(settings.samba, username, mode)  # type: ignore[arg-type]
+    return _storage_action_response(request, ok, message)
+
+
+@router.post("/actions/samba-set-password")
+def action_samba_set_password(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+):
+    settings = _settings(request)
+    ok, message = set_samba_user_password(settings.samba, username, password)
     return _storage_action_response(request, ok, message)
 
 

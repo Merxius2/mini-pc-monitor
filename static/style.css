@@ -2304,6 +2304,42 @@
     margin: 0;
   }
 
+  .samba-password-panel {
+    flex: 0 0 auto;
+  }
+
+  .samba-password-panel summary {
+    list-style: none;
+    cursor: pointer;
+    display: inline-block;
+  }
+
+  .samba-password-panel summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .samba-password-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    margin-top: 0.5rem;
+    padding: 0.55rem 0.6rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: rgba(0, 0, 0, 0.15);
+    min-width: min(100%, 14rem);
+  }
+
+  .samba-password-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .samba-password-field input {
+    width: 100%;
+  }
+
   .storage-upload-row { align-items: start; }
 
   .torrent-drop-zone {

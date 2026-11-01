@@ -104,6 +104,20 @@
               </form>
               <span class="bot-toggle-label samba-access-side {% if u.access == 'write' %}on{% endif %}">Write</span>
             </div>
+            <details class="samba-password-panel">
+              <summary class="btn btn-sm">Set password</summary>
+              <form class="samba-password-form"
+                    hx-post="/actions/samba-set-password"
+                    hx-target="#storageActionResult"
+                    hx-swap="innerHTML">
+                <input type="hidden" name="username" value="{{ u.username }}" />
+                <label class="samba-password-field">
+                  <span class="detail">New password for {{ u.username }}</span>
+                  <input type="password" name="password" minlength="8" required autocomplete="new-password" placeholder="At least 8 characters" />
+                </label>
+                <button type="submit" class="btn btn-sm btn-primary">Update password</button>
+              </form>
+            </details>
             <form class="inline-form"
                   hx-post="/actions/samba-remove-user"
                   hx-target="#storageActionResult"

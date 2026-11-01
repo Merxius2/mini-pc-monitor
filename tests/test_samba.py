@@ -2,7 +2,7 @@ import json
 import unittest
 from unittest.mock import patch
 
-from src.samba import add_samba_user, list_samba_users, set_samba_user_access
+from src.samba import add_samba_user, list_samba_users, set_samba_user_access, set_samba_user_password
 from src.config_loader import SambaConfig
 
 
@@ -71,6 +71,27 @@ class SambaAccessTests(unittest.TestCase):
 
         self.assertTrue(ok)
         self.assertEqual(seen[0], ["add", "guest1", "longpassword", "read"])
+
+    def test_set_password_invokes_helper(self) -> None:
+        config = SambaConfig()
+        seen: list[list[str]] = []
+
+        def fake_admin(_config, *args: str):
+            seen.append(list(args))
+
+            class Result:
+                returncode = 0
+                stdout = ""
+                stderr = ""
+
+            return Result()
+
+        with patch("src.samba._admin", fake_admin):
+            ok, msg = set_samba_user_password(config, "alice", "newpassword")
+
+        self.assertTrue(ok)
+        self.assertEqual(seen[0], ["set-password", "alice", "newpassword"])
+        self.assertIn("updated", msg.lower())
 
 
 if __name__ == "__main__":
