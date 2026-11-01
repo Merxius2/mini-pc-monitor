@@ -1,8 +1,9 @@
-"""Online video downloads via yt-dlp (YouPorn and other configured hosts)."""
+"""Online video downloads via yt-dlp for configured allowed hosts."""
 
 from __future__ import annotations
 
 import re
+import shutil
 import subprocess
 import sys
 import threading
@@ -10,6 +11,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
+from typing import Literal
 from urllib.parse import urlparse
 
 from src.config_loader import VideoDownloadConfig
@@ -17,12 +19,15 @@ from src.config_loader import VideoDownloadConfig
 _JOB_LOCK = threading.Lock()
 _JOBS: dict[str, "DownloadJob"] = {}
 
+DownloadFormat = Literal["video", "audio"]
+
 
 @dataclass
 class DownloadJob:
     id: str
     url: str
     status: str  # queued | running | done | error
+    format: DownloadFormat = "video"
     message: str = ""
     started_at: datetime | None = None
     finished_at: datetime | None = None
@@ -51,6 +56,17 @@ def _host_allowed(url: str, allowed_hosts: list[str]) -> bool:
     return False
 
 
+def normalize_download_format(raw: str | None) -> DownloadFormat:
+    value = (raw or "video").strip().lower()
+    if value in ("audio", "mp3", "audio_only"):
+        return "audio"
+    return "video"
+
+
+def ffmpeg_available() -> bool:
+    return shutil.which("ffmpeg") is not None
+
+
 def validate_video_url(url: str, config: VideoDownloadConfig) -> tuple[bool, str]:
     raw = (url or "").strip()
     if not raw:
@@ -74,45 +90,12 @@ def yt_dlp_available(config: VideoDownloadConfig) -> tuple[bool, str | None]:
     return True, version or None
 
 
-def _human_size(num_bytes: int) -> str:
-    size = float(num_bytes)
-    for unit in ("B", "KB", "MB", "GB", "TB"):
-        if size < 1024 or unit == "TB":
-            return f"{size:.1f} {unit}" if unit != "B" else f"{int(size)} B"
-        size /= 1024
-    return f"{size:.1f} PB"
-
-
-def list_recent_downloads(config: VideoDownloadConfig) -> list[dict[str, str]]:
-    root = Path(config.download_dir)
-    if not root.is_dir():
-        return []
-    files: list[tuple[float, Path]] = []
-    for path in root.rglob("*"):
-        if not path.is_file():
-            continue
-        if path.suffix.lower() in {".part", ".ytdl", ".temp"}:
-            continue
-        try:
-            files.append((path.stat().st_mtime, path))
-        except OSError:
-            continue
-    files.sort(key=lambda item: item[0], reverse=True)
-    out: list[dict[str, str]] = []
-    for mtime, path in files[: config.max_recent_files]:
-        try:
-            stat = path.stat()
-        except OSError:
-            continue
-        rel = path.relative_to(root)
-        out.append(
-            {
-                "name": str(rel),
-                "size": _human_size(stat.st_size),
-                "modified": datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M"),
-            }
-        )
-    return out
+def output_dir_for_format(
+    config: VideoDownloadConfig, download_format: DownloadFormat
+) -> Path:
+    if download_format == "audio":
+        return Path(config.music_dir)
+    return Path(config.video_dir)
 
 
 def list_jobs() -> list[DownloadJob]:
@@ -120,6 +103,29 @@ def list_jobs() -> list[DownloadJob]:
         jobs = list(_JOBS.values())
     jobs.sort(key=lambda j: j.started_at or datetime.min, reverse=True)
     return jobs[:20]
+
+
+def clear_jobs_display() -> tuple[bool, str]:
+    """Remove finished jobs from the UI list; keeps queued/running jobs."""
+    with _JOB_LOCK:
+        active = [j for j in _JOBS.values() if j.status in ("queued", "running")]
+        removed = 0
+        for job_id, job in list(_JOBS.items()):
+            if job.status in ("done", "error"):
+                _JOBS.pop(job_id, None)
+                removed += 1
+        if active:
+            if removed:
+                return True, "Cleared finished jobs"
+            return True, "No finished jobs to clear"
+        _JOBS.clear()
+        return True, "Jobs list cleared"
+
+
+def reset_jobs_display() -> None:
+    """Test helper: drop all jobs from memory."""
+    with _JOB_LOCK:
+        _JOBS.clear()
 
 
 def _set_job(job_id: str, **kwargs: object) -> None:
@@ -131,18 +137,49 @@ def _set_job(job_id: str, **kwargs: object) -> None:
             setattr(job, key, value)
 
 
-def _run_download(job_id: str, url: str, config: VideoDownloadConfig) -> None:
-    _set_job(job_id, status="running", started_at=datetime.now())
-    out_dir = Path(config.download_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
+def build_yt_dlp_download_command(
+    url: str,
+    config: VideoDownloadConfig,
+    download_format: DownloadFormat,
+) -> list[str]:
+    out_dir = output_dir_for_format(config, download_format)
     output_template = str(out_dir / "%(title).180B [%(id)s].%(ext)s")
     cmd = _yt_dlp_cmd(config) + [
         "--no-playlist",
         "--restrict-filenames",
         "-o",
         output_template,
-        url,
     ]
+    if download_format == "audio":
+        cmd += ["-x", "--audio-format", "mp3", "--embed-thumbnail"]
+    else:
+        cmd += [
+            "-f",
+            (
+                "bestvideo[ext=mp4]+bestaudio[ext=m4a]/"
+                "bestvideo[ext=mp4]+bestaudio/"
+                "best[ext=mp4]/"
+                "bestvideo+bestaudio/best"
+            ),
+            "--merge-output-format",
+            "mp4",
+            "--remux-video",
+            "mp4",
+        ]
+    cmd.append(url)
+    return cmd
+
+
+def _run_download(
+    job_id: str,
+    url: str,
+    config: VideoDownloadConfig,
+    download_format: DownloadFormat,
+) -> None:
+    _set_job(job_id, status="running", started_at=datetime.now())
+    out_dir = output_dir_for_format(config, download_format)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    cmd = build_yt_dlp_download_command(url, config, download_format)
     try:
         result = subprocess.run(
             cmd,
@@ -171,19 +208,33 @@ def _run_download(job_id: str, url: str, config: VideoDownloadConfig) -> None:
         _set_job(job_id, status="error", message=err, finished_at=datetime.now())
         return
 
-    _set_job(job_id, status="done", message="Saved to download folder", finished_at=datetime.now())
+    done_msg = (
+        f"Saved MP3 to {config.music_dir}"
+        if download_format == "audio"
+        else f"Saved video to {config.video_dir}"
+    )
+    _set_job(job_id, status="done", message=done_msg, finished_at=datetime.now())
 
 
-def start_download(url: str, config: VideoDownloadConfig) -> tuple[bool, str, str | None]:
+def start_download(
+    url: str,
+    config: VideoDownloadConfig,
+    download_format: DownloadFormat | str | None = "video",
+) -> tuple[bool, str, str | None]:
+    fmt = normalize_download_format(
+        download_format if isinstance(download_format, str) else "video"
+    )
     ok, message = validate_video_url(url, config)
     if not ok:
         return False, message, None
+    if fmt == "audio" and not ffmpeg_available():
+        return False, "MP3 downloads need ffmpeg installed on the mini-PC", None
     available, ver_err = yt_dlp_available(config)
     if not available:
         return False, ver_err or "yt-dlp is not installed", None
 
     job_id = uuid.uuid4().hex[:12]
-    job = DownloadJob(id=job_id, url=url.strip(), status="queued")
+    job = DownloadJob(id=job_id, url=url.strip(), status="queued", format=fmt)
     with _JOB_LOCK:
         _JOBS[job_id] = job
         if len(_JOBS) > 50:
@@ -193,7 +244,7 @@ def start_download(url: str, config: VideoDownloadConfig) -> tuple[bool, str, st
 
     thread = threading.Thread(
         target=_run_download,
-        args=(job_id, url.strip(), config),
+        args=(job_id, url.strip(), config, fmt),
         name=f"video-download-{job_id}",
         daemon=True,
     )
@@ -203,18 +254,27 @@ def start_download(url: str, config: VideoDownloadConfig) -> tuple[bool, str, st
 
 def get_video_download_status(config: VideoDownloadConfig) -> dict:
     available, version_or_err = yt_dlp_available(config)
-    mount = Path(config.download_dir)
-    dir_ok = mount.is_dir() or mount.parent.is_dir()
+    video_root = Path(config.video_dir)
+    music_root = Path(config.music_dir)
+    dir_ok = (
+        video_root.is_dir()
+        or music_root.is_dir()
+        or video_root.parent.is_dir()
+        or music_root.parent.is_dir()
+    )
     active = sum(1 for j in list_jobs() if j.status in ("queued", "running"))
+    ff_ok = ffmpeg_available()
     return {
         "enabled": config.enabled,
         "yt_dlp_ok": available,
         "yt_dlp_version": version_or_err if available else None,
         "yt_dlp_error": None if available else version_or_err,
-        "download_dir": config.download_dir,
+        "ffmpeg_ok": ff_ok,
+        "video_dir": config.video_dir,
+        "music_dir": config.music_dir,
+        "download_dir": config.video_dir,
         "download_dir_ready": dir_ok,
         "allowed_hosts": config.allowed_hosts,
         "active_jobs": active,
         "jobs": list_jobs(),
-        "recent_files": list_recent_downloads(config),
     }

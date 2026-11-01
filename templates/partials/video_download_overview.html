@@ -13,34 +13,68 @@
   {% endif %}
 
   <p class="detail">
-    Allowed sites:
-    {% for host in vd.allowed_hosts %}<code>{{ host }}</code>{% if not loop.last %}, {% endif %}{% endfor %}
-    · Save folder: <span class="mono">{{ vd.download_dir }}</span>
+    Supports YouTube and other allow-listed sites (see <code>video_download.allowed_hosts</code> in settings)
+    · Video: <span class="mono">{{ vd.video_dir }}</span>
+    · Music: <span class="mono">{{ vd.music_dir }}</span>
     {% if vd.yt_dlp_version %} · {{ vd.yt_dlp_version }}{% endif %}
+    {% if not vd.ffmpeg_ok %} · <span class="would_sell">ffmpeg missing — MP3 unavailable</span>{% endif %}
   </p>
 
   <form id="video-download-form"
-        class="storage-form"
-        hx-post="/actions/download"
+        class="storage-form video-download-form"
+        hx-post="/actions/video-download"
         hx-target="#videoDownloadActionResult"
         hx-swap="innerHTML">
-    <label for="video-url">Video page URL</label>
-    <input type="url"
-           id="video-url"
-           name="url"
-           required
-           placeholder="https://www.youporn.com/watch/..."
-           autocomplete="off"
-           spellcheck="false" />
-    <button type="submit" class="btn btn-primary" {% if not vd.yt_dlp_ok %}disabled{% endif %}>Download</button>
+    <label class="video-url-field" for="video-url">
+      <span class="video-url-field-label">Video page URL</span>
+      <input type="url"
+             id="video-url"
+             name="url"
+             required
+             placeholder="Paste a YouTube or other supported link…"
+             autocomplete="off"
+             spellcheck="false" />
+    </label>
+    <div class="video-download-form-actions">
+      <div class="video-download-format-row">
+        <span class="video-download-format-label" id="video-download-format-label">Format</span>
+        <div class="format-segment"
+             role="group"
+             aria-labelledby="video-download-format-label">
+          <label class="format-segment-option">
+            <input type="radio" name="format" value="video" checked />
+            <span>Video (MP4)</span>
+          </label>
+          <label class="format-segment-option">
+            <input type="radio"
+                   name="format"
+                   value="audio"
+                   {% if not vd.ffmpeg_ok %}disabled{% endif %} />
+            <span>MP3</span>
+          </label>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary video-download-submit" {% if not vd.yt_dlp_ok %}disabled{% endif %}>Download</button>
+    </div>
   </form>
 </section>
 
 <section class="panel storage-section" id="video-download-jobs">
   <div class="panel-header">
-    Jobs
-    {% if vd.active_jobs %}
-    <span class="tag would_wait">{{ vd.active_jobs }} active</span>
+    <span>
+      Jobs
+      {% if vd.active_jobs %}
+      <span class="tag would_wait">{{ vd.active_jobs }} active</span>
+      {% endif %}
+    </span>
+    {% if vd.jobs %}
+    <form class="inline-form panel-header-actions"
+          hx-post="/actions/video-download-clear-jobs"
+          hx-target="#videoDownloadActionResult"
+          hx-swap="innerHTML"
+          hx-confirm="Clear finished jobs from this list? Active downloads stay visible.">
+      <button type="submit" class="btn btn-sm">Clear jobs</button>
+    </form>
     {% endif %}
   </div>
   {% if vd.jobs %}
@@ -48,6 +82,9 @@
     {% for job in vd.jobs %}
     <li>
       <span class="mono" title="{{ job.url }}">{{ job.url | truncate(72, True) }}</span>
+      <span class="tag {% if job.format == 'audio' %}would_wait{% else %}would_hold{% endif %}">
+        {% if job.format == 'audio' %}MP3{% else %}video{% endif %}
+      </span>
       <span class="tag {% if job.status == 'done' %}would_hold{% elif job.status == 'error' %}would_sell{% else %}would_wait{% endif %}">
         {{ job.status }}
       </span>
@@ -59,21 +96,5 @@
   </ul>
   {% else %}
   <p class="action-log-empty">No downloads yet — paste a URL above.</p>
-  {% endif %}
-</section>
-
-<section class="panel storage-section" id="video-download-files">
-  <div class="panel-header">Recent files</div>
-  {% if vd.recent_files %}
-  <ul class="storage-user-list">
-    {% for f in vd.recent_files %}
-    <li>
-      <span class="mono">{{ f.name }}</span>
-      <span class="detail">{{ f.size }} · {{ f.modified }}</span>
-    </li>
-    {% endfor %}
-  </ul>
-  {% else %}
-  <p class="action-log-empty">No video files in the download folder yet.</p>
   {% endif %}
 </section>

@@ -1,6 +1,9 @@
 # RAID storage, Samba, torrents, ClamAV
 
-Dashboard page: **RAID storage** (`/storage`) on [http://192.168.1.30:8080/storage](http://192.168.1.30:8080/storage)
+Dashboard pages:
+
+- **RAID storage** (`/storage`) — [http://192.168.1.30:8080/storage](http://192.168.1.30:8080/storage)
+- **Torrents** (`/torrents`) — [http://192.168.1.30:8080/torrents](http://192.168.1.30:8080/torrents)
 
 If the **dashboard** shows a storage alert (read-only or degraded RAID), fix the array before using torrents or Samba. Boot uses `minipc-ensure-storage.sh`, which re-assembles `md0` by UUID from `/etc/mdadm/mdadm.conf` if the mirror was left in a **broken** state after disk reorder.
 

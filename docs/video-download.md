@@ -1,21 +1,26 @@
-# Video download (standalone)
+# Video download
 
-Separate web app from the mini-PC dashboard. Paste a YouPorn URL and save the file to RAID storage via `yt-dlp`.
+Integrated into the mini-PC dashboard. Paste a YouTube or other allow-listed video URL and save as MP4 or MP3 (MP3 needs `ffmpeg`) via `yt-dlp`.
 
 ## URL
 
-**http://192.168.1.30:8083/** (port and `public_url` in `config/settings.yaml` → `video_download`)
+**http://192.168.1.30:8080/video-download** (same app as the dashboard on port **8080**)
 
-## One-time install (mini-PC)
-
-```bash
-cd ~/mini-pc-monitor
-pip install -r requirements.txt   # or: .venv + requirements.txt
-bash scripts/install-video-download-service.sh
-```
-
-The dashboard on port **8080** does not link to this tool — bookmark the URL above.
+Also linked in the sidebar when `video_download.enabled` is true.
 
 ## Config
 
-See `video_download` in `config/settings.yaml` (`download_dir`, `allowed_hosts`, `port`).
+See `video_download` in `config/settings.yaml` (`video_dir`, `music_dir`, `allowed_hosts`).
+
+Default layout on RAID:
+
+- `…/Downloads/youtube downloader/videos` — MP4
+- `…/Downloads/youtube downloader/music` — MP3
+
+## Legacy standalone service (:8083)
+
+If you previously ran `video-download.service`, disable it:
+
+```bash
+bash scripts/install-video-download-service.sh
+```

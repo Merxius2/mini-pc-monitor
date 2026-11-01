@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# DEPRECATED: video download is integrated into mini-pc-monitor (port 8080).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"

@@ -165,16 +165,32 @@ class SystemUpdatesConfig:
 @dataclass
 class VideoDownloadConfig:
     enabled: bool = True
-    host: str = "0.0.0.0"
-    port: int = 8083
-    public_url: str = "http://192.168.1.30:8083/"
-    download_dir: str = "/mnt/storage/shared/Downloads/videos"
+    download_dir: str = "/mnt/storage/shared/Downloads/youtube downloader/videos"
+    video_dir: str = ""
+    music_dir: str = ""
     allowed_hosts: list[str] = field(
-        default_factory=lambda: ["youporn.com", "www.youporn.com"]
+        default_factory=lambda: [
+            "youporn.com",
+            "www.youporn.com",
+            "youtube.com",
+            "www.youtube.com",
+            "m.youtube.com",
+            "music.youtube.com",
+            "youtu.be",
+        ]
     )
     yt_dlp_command: str = ""
     download_timeout_seconds: int = 3600
-    max_recent_files: int = 15
+
+    def __post_init__(self) -> None:
+        if not (self.video_dir or "").strip():
+            object.__setattr__(self, "video_dir", self.download_dir)
+        if not (self.music_dir or "").strip():
+            object.__setattr__(
+                self,
+                "music_dir",
+                str(Path(self.video_dir).parent / "music"),
+            )
 
 
 @dataclass

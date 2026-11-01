@@ -38,7 +38,7 @@ services:
     label: Transmission
     manage: true
     logs: true
-    dashboard_url: /storage#torrents
+    dashboard_url: /torrents
   - unit: clamav-daemon.service
     label: ClamAV
     manage: true
@@ -143,15 +143,18 @@ system_updates:
 
 video_download:
   enabled: true
-  host: 0.0.0.0
-  port: 8083
-  public_url: http://192.168.1.30:8083/
-  download_dir: /mnt/storage/shared/Downloads/videos
+  download_dir: /mnt/storage/shared/Downloads/youtube downloader/videos
+  video_dir: /mnt/storage/shared/Downloads/youtube downloader/videos
+  music_dir: /mnt/storage/shared/Downloads/youtube downloader/music
   allowed_hosts:
     - youporn.com
     - www.youporn.com
+    - youtube.com
+    - www.youtube.com
+    - m.youtube.com
+    - music.youtube.com
+    - youtu.be
   download_timeout_seconds: 3600
-  max_recent_files: 15
 
 azerothcore:
   enabled: true

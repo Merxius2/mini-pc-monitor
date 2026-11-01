@@ -34,6 +34,11 @@ from src.system_updates import (
     get_system_updates_status,
     refresh_system_updates,
 )
+from src.video_download import (
+    clear_jobs_display,
+    get_video_download_status,
+    start_download,
+)
 
 router = APIRouter()
 
@@ -54,6 +59,13 @@ def _layout_context(settings) -> dict:
         "uptime": format_uptime(host["uptime_seconds"]),
         "now_str": datetime.now().strftime("%A %d %b %Y · %H:%M"),
     }
+
+
+def _nav_context(settings) -> dict:
+    vd = settings.video_download
+    if not vd.enabled:
+        return {"video_download_enabled": False, "video_download_url": ""}
+    return {"video_download_enabled": True, "video_download_url": "/video-download"}
 
 
 def _processes_context(settings) -> dict[str, Any]:
@@ -94,6 +106,7 @@ def dashboard_home(request: Request):
         "page_title": "Dashboard",
         "active_nav": "dashboard",
         "status": _status_context(settings),
+        **_nav_context(settings),
     }
     return _templates(request).TemplateResponse(request, "dashboard.html", ctx)
 
@@ -107,6 +120,7 @@ def management_page(request: Request):
         "page_title": "Mini-PC management",
         "active_nav": "management",
         "status": status,
+        **_nav_context(settings),
     }
     return _templates(request).TemplateResponse(request, "management.html", ctx)
 
@@ -133,8 +147,14 @@ def _storage_context(settings) -> dict:
             mount=settings.storage.mount,
         ),
         "samba": get_samba_status(settings.samba),
-        "transmission": get_transmission_status(settings.transmission),
         "clamav": get_clamav_status(settings.clamav),
+    }
+
+
+def _torrents_context(settings) -> dict:
+    return {
+        "transmission": get_transmission_status(settings.transmission),
+        "samba": get_samba_status(settings.samba),
     }
 
 
@@ -147,6 +167,7 @@ def storage_page(request: Request):
         "active_nav": "storage",
         "status": _layout_context(settings),
         "storage": storage_ctx,
+        **_nav_context(settings),
         **storage_ctx,
     }
     return _templates(request).TemplateResponse(request, "storage.html", ctx)
@@ -160,6 +181,98 @@ def storage_overview_partial(request: Request):
         "partials/storage_overview.html",
         _storage_context(settings),
     )
+
+
+@router.get("/torrents", response_class=HTMLResponse)
+def torrents_page(request: Request):
+    settings = _settings(request)
+    torrents_ctx = _torrents_context(settings)
+    ctx = {
+        "page_title": "Torrents",
+        "active_nav": "torrents",
+        "status": _layout_context(settings),
+        **_nav_context(settings),
+        **torrents_ctx,
+    }
+    return _templates(request).TemplateResponse(request, "torrents.html", ctx)
+
+
+@router.get("/partials/torrents-overview", response_class=HTMLResponse)
+def torrents_overview_partial(request: Request):
+    settings = _settings(request)
+    return _templates(request).TemplateResponse(
+        request,
+        "partials/torrents_overview.html",
+        _torrents_context(settings),
+    )
+
+
+def _video_download_context(settings) -> dict:
+    cfg = settings.video_download
+    return {"video_download": get_video_download_status(cfg)}
+
+
+def _require_video_download(settings) -> None:
+    if not settings.video_download.enabled:
+        raise HTTPException(status_code=404, detail="Video download disabled")
+
+
+@router.get("/video-download", response_class=HTMLResponse)
+def video_download_page(request: Request):
+    settings = _settings(request)
+    _require_video_download(settings)
+    ctx = {
+        "page_title": "Video download",
+        "active_nav": "video_download",
+        "status": _layout_context(settings),
+        **_nav_context(settings),
+        **_video_download_context(settings),
+    }
+    return _templates(request).TemplateResponse(request, "video_download.html", ctx)
+
+
+@router.get("/partials/video-download-overview", response_class=HTMLResponse)
+def video_download_overview_partial(request: Request):
+    settings = _settings(request)
+    _require_video_download(settings)
+    return _templates(request).TemplateResponse(
+        request,
+        "partials/video_download_overview.html",
+        _video_download_context(settings),
+    )
+
+
+def _video_download_action_response(request: Request, ok: bool, message: str):
+    if request.headers.get("HX-Request"):
+        return _templates(request).TemplateResponse(
+            request,
+            "partials/action_result.html",
+            {"ok": ok, "message": message},
+            headers={"HX-Trigger": "refreshVideoDownload"},
+        )
+    if not ok:
+        raise HTTPException(status_code=400, detail=message)
+    return RedirectResponse("/video-download", status_code=303)
+
+
+@router.post("/actions/video-download")
+def action_video_download(
+    request: Request,
+    url: str = Form(...),
+    format: str = Form("video"),
+):
+    settings = _settings(request)
+    _require_video_download(settings)
+    ok, message, _job_id = start_download(url, settings.video_download, format)
+    return _video_download_action_response(request, ok, message)
+
+
+@router.post("/actions/video-download-clear-jobs")
+def action_video_download_clear_jobs(request: Request):
+    settings = _settings(request)
+    _require_video_download(settings)
+    ok, message = clear_jobs_display()
+    return _video_download_action_response(request, ok, message)
 
 
 @router.get("/partials/storage-alert", response_class=HTMLResponse)
@@ -197,6 +310,7 @@ def services_page(request: Request):
         "active_nav": "services",
         "status": _layout_context(settings),
         "service_count": len(settings.services),
+        **_nav_context(settings),
     }
     return _templates(request).TemplateResponse(request, "services.html", ctx)
 
@@ -443,6 +557,19 @@ def _storage_action_response(request: Request, ok: bool, message: str):
     return RedirectResponse("/storage", status_code=303)
 
 
+def _torrent_action_response(request: Request, ok: bool, message: str):
+    if request.headers.get("HX-Request"):
+        return _templates(request).TemplateResponse(
+            request,
+            "partials/action_result.html",
+            {"ok": ok, "message": message},
+            headers={"HX-Trigger": "refreshTorrents"},
+        )
+    if not ok:
+        raise HTTPException(status_code=400, detail=message)
+    return RedirectResponse("/torrents", status_code=303)
+
+
 @router.post("/actions/samba-add-user")
 def action_samba_add_user(
     request: Request,
@@ -469,28 +596,28 @@ async def action_torrent_upload(
     settings = _settings(request)
     name = (torrent_file.filename or "").lower()
     if not name.endswith(".torrent"):
-        return _storage_action_response(request, False, "Upload a .torrent file")
+        return _torrent_action_response(request, False, "Upload a .torrent file")
     data = await torrent_file.read()
     if not data:
-        return _storage_action_response(request, False, "Empty file")
+        return _torrent_action_response(request, False, "Empty file")
     try:
         client = transmission_client(settings.transmission)
         client.add_torrent_bytes(data, settings.transmission.download_dir)
     except Exception as exc:  # noqa: BLE001
-        return _storage_action_response(request, False, str(exc))
-    return _storage_action_response(request, True, f"Added torrent {torrent_file.filename}")
+        return _torrent_action_response(request, False, str(exc))
+    return _torrent_action_response(request, True, f"Added torrent {torrent_file.filename}")
 
 
 @router.post("/actions/torrent-add-magnet")
 def action_torrent_add_magnet(request: Request, magnet: str = Form(...)):
     settings = _settings(request)
     if not magnet.strip().startswith("magnet:"):
-        return _storage_action_response(request, False, "Paste a magnet: link")
+        return _torrent_action_response(request, False, "Paste a magnet: link")
     try:
         transmission_client(settings.transmission).add_torrent_magnet(magnet)
     except Exception as exc:  # noqa: BLE001
-        return _storage_action_response(request, False, str(exc))
-    return _storage_action_response(request, True, "Magnet link added")
+        return _torrent_action_response(request, False, str(exc))
+    return _torrent_action_response(request, True, "Magnet link added")
 
 
 @router.post("/actions/torrent-remove")
@@ -506,8 +633,8 @@ def action_torrent_remove(
             delete_data=delete_data == "true",
         )
     except Exception as exc:  # noqa: BLE001
-        return _storage_action_response(request, False, str(exc))
-    return _storage_action_response(request, True, "Torrent removed")
+        return _torrent_action_response(request, False, str(exc))
+    return _torrent_action_response(request, True, "Torrent removed")
 
 
 @router.post("/actions/torrent-start")
@@ -516,8 +643,8 @@ def action_torrent_start(request: Request, torrent_id: int = Form(...)):
     try:
         transmission_client(settings.transmission).start_torrent(torrent_id)
     except Exception as exc:  # noqa: BLE001
-        return _storage_action_response(request, False, str(exc))
-    return _storage_action_response(request, True, "Torrent started")
+        return _torrent_action_response(request, False, str(exc))
+    return _torrent_action_response(request, True, "Torrent started")
 
 
 @router.post("/actions/torrent-stop")
@@ -526,8 +653,8 @@ def action_torrent_stop(request: Request, torrent_id: int = Form(...)):
     try:
         transmission_client(settings.transmission).stop_torrent(torrent_id)
     except Exception as exc:  # noqa: BLE001
-        return _storage_action_response(request, False, str(exc))
-    return _storage_action_response(request, True, "Torrent stopped")
+        return _torrent_action_response(request, False, str(exc))
+    return _torrent_action_response(request, True, "Torrent stopped")
 
 
 @router.get("/partials/clamav-scan-progress", response_class=HTMLResponse)

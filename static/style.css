@@ -94,6 +94,13 @@
     font-weight: 600;
   }
 
+  .nav a.nav-app-link::after {
+    content: "↗";
+    font-size: 0.72em;
+    opacity: 0.55;
+    margin-left: auto;
+  }
+
   .status-panel {
     padding: 1rem 1.25rem;
     border-top: 1px solid var(--border);
@@ -1898,11 +1905,144 @@
 
   .storage-form input[type="text"],
   .storage-form input[type="password"],
-  .storage-form input[type="url"],
+  .storage-form input[type="url"] {
+    font: inherit;
+    width: 100%;
+    padding: 0.55rem 0.65rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+  }
+
+  .storage-form input[type="text"]:focus,
+  .storage-form input[type="password"]:focus,
+  .storage-form input[type="url"]:focus {
+    outline: none;
+    border-color: rgba(59, 130, 246, 0.55);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+  }
+
   .standalone-tool {
     max-width: 52rem;
     margin: 0 auto;
     padding: 2rem 1.75rem 3rem;
+  }
+
+  .video-download-page {
+    background:
+      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(59, 130, 246, 0.14), transparent),
+      var(--bg);
+  }
+
+  .video-download-page .standalone-tool-header h1 {
+    background: linear-gradient(135deg, var(--text) 0%, #a8b4cc 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .video-download-page #video-download-form-section .panel-header {
+    border-bottom-color: rgba(42, 51, 71, 0.85);
+  }
+
+  .video-download-page #video-download-form-section {
+    border-color: rgba(59, 130, 246, 0.22);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
+  }
+
+  .video-download-form {
+    padding: 1.15rem 1.15rem 1.25rem;
+  }
+
+  .video-download-form .video-url-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 0;
+    padding: 1rem 1.1rem 1.05rem;
+    border: 2px dashed rgba(59, 130, 246, 0.35);
+    border-radius: 14px;
+    background: linear-gradient(
+      165deg,
+      rgba(59, 130, 246, 0.07) 0%,
+      rgba(20, 25, 34, 0.4) 55%,
+      var(--surface2) 100%
+    );
+    cursor: text;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  }
+
+  .video-download-form .video-url-field:focus-within {
+    border-color: rgba(59, 130, 246, 0.65);
+    border-style: solid;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+    background: linear-gradient(
+      165deg,
+      rgba(59, 130, 246, 0.1) 0%,
+      rgba(20, 25, 34, 0.35) 55%,
+      var(--surface2) 100%
+    );
+  }
+
+  .video-download-form .video-url-field-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--muted);
+    margin-bottom: 0;
+  }
+
+  .video-download-form .video-url-field input[type="url"] {
+    border: none;
+    background: transparent;
+    padding: 0.15rem 0;
+    font-size: 1rem;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .video-download-form .video-url-field input[type="url"]:focus {
+    border: none;
+    box-shadow: none;
+  }
+
+  .video-download-form .video-url-field input[type="url"]::placeholder {
+    color: rgba(139, 149, 168, 0.75);
+  }
+
+  .video-download-form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.85rem 1rem;
+    margin-top: 1rem;
+    padding-top: 0.15rem;
+  }
+
+  .video-download-form .video-download-format-row {
+    margin-bottom: 0;
+  }
+
+  .video-download-submit {
+    min-width: 8.5rem;
+    padding: 0.55rem 1.25rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+  }
+
+  .panel-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+  }
+
+  .video-download-page .storage-user-list li {
+    border-radius: 8px;
+    padding: 0.5rem 0.65rem;
   }
 
   .standalone-tool-header {
@@ -1928,6 +2068,71 @@
     border: 1px solid var(--border);
     background: var(--surface2);
     color: var(--text);
+  }
+
+  .storage-form .video-download-format-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.65rem 0.85rem;
+    margin-bottom: 0.85rem;
+  }
+
+  .storage-form .video-download-format-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  .storage-form .format-segment {
+    display: inline-flex;
+    align-items: stretch;
+    padding: 3px;
+    border-radius: 999px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    gap: 2px;
+  }
+
+  .storage-form .format-segment-option {
+    position: relative;
+    margin: 0;
+    cursor: pointer;
+  }
+
+  .storage-form .format-segment-option input {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    pointer-events: none;
+  }
+
+  .storage-form .format-segment-option span {
+    display: block;
+    padding: 0.4rem 1.05rem;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--muted);
+    transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+    user-select: none;
+  }
+
+  .storage-form .format-segment-option:has(input:checked) span {
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+  }
+
+  .storage-form .format-segment-option:has(input:disabled) {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
+
+  .storage-form .format-segment-option:has(input:disabled) span {
+    pointer-events: none;
   }
 
   .storage-user-list {

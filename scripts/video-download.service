@@ -1,5 +1,5 @@
 [Unit]
-Description=YouPorn video download tool (standalone web UI)
+Description=DEPRECATED — use mini-pc-monitor /video-download on :8080
 After=network.target
 Documentation=https://github.com/Merxius2/mini-pc-monitor/blob/main/docs/video-download.md
 

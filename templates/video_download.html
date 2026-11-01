@@ -1,48 +1,40 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{ page_title }}</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/style.css?v={{ static_version }}" />
-  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
-</head>
-<body>
-  <div class="standalone-tool">
-    <header class="standalone-tool-header">
-      <h1>Video download</h1>
-      <p>Paste a YouPorn page URL — files are saved to RAID storage via <code>yt-dlp</code>. This tool is separate from the mini-PC dashboard{% if public_url %} · bookmark <code class="mono">{{ public_url }}</code>{% endif %}.</p>
-    </header>
-
-    <div id="videoDownloadActionResult"></div>
-
-    <div id="videoDownloadPanel"
-         hx-get="/partials/overview"
-         hx-trigger="load, every 5s [!videoDownloadUserEditing()], refreshVideoDownload from:body"
-         hx-swap="innerHTML">
-      {% include "partials/video_download_overview.html" %}
+{% extends "base.html" %}
+{% block main %}
+<div class="video-download-page">
+  <div class="top-bar">
+    <div>
+      <h2>Video download</h2>
+      <p>YouTube and other allow-listed sites on {{ status.hostname }} · saves via <code>yt-dlp</code> to RAID</p>
     </div>
   </div>
 
-  <script>
-    function videoDownloadUserEditing() {
-      var panel = document.getElementById("videoDownloadPanel");
-      if (!panel) return false;
-      var el = document.activeElement;
-      if (!el || !panel.contains(el)) return false;
-      return el.matches("input, textarea, select");
-    }
+  <div id="videoDownloadActionResult"></div>
 
-    document.body.addEventListener("htmx:afterSwap", function (e) {
-      if (e.detail.target.id !== "videoDownloadPanel") return;
-      var ok = document.querySelector("#videoDownloadActionResult .action-result.ok");
-      if (!ok) return;
-      var form = document.getElementById("video-download-form");
-      if (form) form.reset();
-    });
-  </script>
-</body>
-</html>
+  <div id="videoDownloadPanel"
+       hx-get="/partials/video-download-overview"
+       hx-trigger="load, every 5s [!videoDownloadUserEditing()], refreshVideoDownload from:body"
+       hx-swap="innerHTML">
+    {% include "partials/video_download_overview.html" %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function videoDownloadUserEditing() {
+    var panel = document.getElementById("videoDownloadPanel");
+    if (!panel) return false;
+    var el = document.activeElement;
+    if (!el || !panel.contains(el)) return false;
+    return el.matches("input, textarea, select");
+  }
+
+  document.body.addEventListener("htmx:afterSwap", function (e) {
+    if (e.detail.target.id !== "videoDownloadPanel") return;
+    var ok = document.querySelector("#videoDownloadActionResult .action-result.ok");
+    if (!ok) return;
+    var form = document.getElementById("video-download-form");
+    if (form) form.reset();
+  });
+</script>
+{% endblock %}
