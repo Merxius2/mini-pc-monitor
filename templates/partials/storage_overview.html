@@ -1,11 +1,22 @@
 {% set tx = transmission %}
 {% set clam = clamav %}
 
+{% if raid.has_alerts %}
+<div class="storage-alert-stack storage-alert-stack-page">
+  {% for alert in raid.alerts %}
+  <div class="storage-alert storage-alert-{{ alert.level }}">
+    <strong>{{ alert.title }}</strong>
+    <p>{{ alert.detail }}</p>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
 <section class="panel storage-section" id="raid">
   <div class="panel-header">
     RAID mirror
     <span class="tag {% if raid.overall == 'ok' %}would_hold{% elif raid.overall == 'amber' %}would_wait{% else %}would_sell{% endif %}">
-      {% if raid.mount.mounted %}mounted{% else %}not mounted{% endif %}
+      {% if raid.mount.read_only %}read-only{% elif raid.mount.mounted %}mounted{% else %}not mounted{% endif %}
     </span>
   </div>
   <div class="storage-grid">
@@ -19,15 +30,30 @@
       <div class="storage-bar"><span style="width: {{ raid.mount.percent }}%"></span></div>
       <span class="detail">{{ raid.mount.percent }}% · {{ raid.mount.free_human }} free</span>
     </div>
-    {% if raid.array %}
-    <div class="storage-stat">
-      <span class="storage-stat-label">Array</span>
-      <strong class="mono">{{ raid.array.device }} · {{ raid.array.level }}</strong>
-      <span class="detail">{{ raid.array.state }}{% if raid.array.sync %} · [{{ raid.array.sync }}]{% endif %}</span>
-      <span class="detail">Members: {{ raid.array.members | join(', ') }}</span>
-    </div>
-    {% endif %}
   </div>
+
+  {% if raid.array_health or raid.disks %}
+  <div class="raid-health-panel">
+    <span class="storage-stat-label">Health</span>
+    <ul class="raid-health-list">
+      {% if raid.array_health %}
+      <li class="raid-health-item">
+        <span class="signal-dot signal-{{ raid.array_health.dot }}" title="Array {{ raid.array_health.label }}"></span>
+        <span class="raid-health-name"><strong>Array</strong> <span class="mono">{{ raid.array.device if raid.array else 'md0' }}</span></span>
+        <span class="raid-health-state">{{ raid.array_health.label }}{% if raid.array and raid.array.sync %} · [{{ raid.array.sync }}]{% endif %}</span>
+      </li>
+      {% endif %}
+      {% for disk in raid.disks %}
+      <li class="raid-health-item">
+        <span class="signal-dot signal-{{ disk.dot }}" title="{{ disk.state }}"></span>
+        <span class="raid-health-name"><strong>Disk</strong> <span class="mono">{{ disk.device }}</span></span>
+        <span class="raid-health-state">{{ disk.state }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    <p class="detail raid-health-legend">Green = healthy · Yellow = rebuilding/degraded · Red = failed or filesystem critical</p>
+  </div>
+  {% endif %}
 </section>
 
 <section class="panel storage-section" id="samba">
@@ -206,7 +232,33 @@
     ClamAV (auto-scan downloads)
     <span class="tag {% if clam.overall == 'ok' %}would_hold{% else %}would_sell{% endif %}">{{ clam.daemon_active }}</span>
   </div>
-  <p class="detail">Runs after each completed torrent · freshclam: {{ clam.freshclam_active }} · virus DB: {{ clam.db_updated or '—' }}</p>
+  <p class="detail">Runs after each completed torrent · freshclam: {{ clam.freshclam_active }} · virus DB: {{ clam.db_updated or '—' }}{% if clam.max_file_size %} · max file size {{ clam.max_file_size }}{% endif %}</p>
+  <div id="clamavScanProgress"
+       hx-get="/partials/clamav-scan-progress"
+       hx-trigger="load, every 3s, refreshClamScanProgress from:body"
+       hx-swap="innerHTML">
+    {% with progress = clam.scan_progress %}
+    {% include "partials/clamav_scan_progress.html" %}
+    {% endwith %}
+  </div>
+  <div class="system-updates-actions clamav-scan-actions">
+    <form class="inline-form"
+          hx-post="/actions/clamav-scan"
+          hx-target="#storageActionResult"
+          hx-swap="innerHTML"
+          hx-confirm="Scan everything in shared/Downloads? Large libraries can take a long time. Progress appears below.">
+      <input type="hidden" name="scope" value="downloads" />
+      <button type="submit" class="btn btn-sm" {% if clam.scan_progress.active %}disabled{% endif %}>Scan downloads</button>
+    </form>
+    <form class="inline-form"
+          hx-post="/actions/clamav-scan"
+          hx-target="#storageActionResult"
+          hx-swap="innerHTML"
+          hx-confirm="Scan the entire Samba shared folder (/mnt/storage/shared)? This can take hours. Progress appears below.">
+      <input type="hidden" name="scope" value="shared" />
+      <button type="submit" class="btn btn-sm" {% if clam.scan_progress.active %}disabled{% endif %}>Scan shared folder</button>
+    </form>
+  </div>
   {% if clam.log_tail %}
   <pre class="service-log-preview">{% for line in clam.log_tail %}{{ line }}
 {% endfor %}</pre>

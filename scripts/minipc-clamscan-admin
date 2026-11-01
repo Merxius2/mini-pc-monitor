@@ -1,0 +1,163 @@
+#!/bin/bash
+# Manual ClamAV scans for Mini-PC Monitor (passwordless sudo, fixed paths).
+set -euo pipefail
+
+LIB="/usr/local/sbin/minipc-clamscan-lib.sh"
+# shellcheck source=/dev/null
+. "$LIB"
+
+LOG="${MINIPC_CLAM_LOG:-/mnt/storage/logs/clamav-scan.log}"
+PROGRESS="${MINIPC_CLAM_PROGRESS:-/mnt/storage/logs/clamav-scan.progress.json}"
+LOCK="${MINIPC_CLAM_LOCK:-/mnt/storage/logs/clamav-scan.lock}"
+QUARANTINE="${MINIPC_CLAM_QUARANTINE:-/mnt/storage/quarantine}"
+DOWNLOADS="/mnt/storage/shared/Downloads"
+SHARED="/mnt/storage/shared"
+
+emit_json() {
+  python3 - "$@" <<'PY'
+import json
+import sys
+
+ok, label, target, infected, detail = sys.argv[1:6]
+print(
+    json.dumps(
+        {
+            "ok": ok == "true",
+            "scope": label,
+            "target": target,
+            "infected": int(infected or 0),
+            "detail": detail,
+        }
+    )
+)
+PY
+}
+
+resolve_scope() {
+  case "${1:-}" in
+    downloads)
+      TARGET="$DOWNLOADS"
+      LABEL="downloads"
+      ;;
+    shared)
+      TARGET="$SHARED"
+      LABEL="shared"
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+run_scan_body() {
+  local scope="$1"
+  resolve_scope "$scope" || return 1
+
+  mkdir -p "$(dirname "$LOG")" "$(dirname "$PROGRESS")" "$QUARANTINE"
+  minipc_clam_progress_init "$PROGRESS" "$LABEL" "$TARGET"
+
+  if ! systemctl is-active --quiet clamav-daemon.service; then
+    {
+      echo "=== $(date -Iseconds) manual scan ($LABEL): $TARGET ==="
+      echo "clamav-daemon not active, abort"
+    } >>"$LOG" 2>&1
+    minipc_clam_progress_finish "$PROGRESS" "error" "clamav-daemon is not running" 0 0 0 0
+    return 1
+  fi
+
+  if [ ! -e "$TARGET" ]; then
+    {
+      echo "=== $(date -Iseconds) manual scan ($LABEL): $TARGET ==="
+      echo "Missing path, abort"
+    } >>"$LOG" 2>&1
+    minipc_clam_progress_finish "$PROGRESS" "error" "scan path missing" 0 0 0 0
+    return 1
+  fi
+
+  local scan_tmp
+  scan_tmp="$(mktemp)"
+  local finish_rc=0 scan_rc=0
+  {
+    echo "=== $(date -Iseconds) manual scan ($LABEL): $TARGET ==="
+    if minipc_clamdscan_run "$TARGET" "$QUARANTINE" "$scan_tmp" "$PROGRESS" "$LABEL"; then
+      scan_rc=0
+    else
+      scan_rc=$?
+    fi
+    minipc_clamdscan_finish "$scan_tmp" "$scan_rc" || finish_rc=$?
+  } >>"$LOG" 2>&1
+
+  minipc_clamdscan_parse_summary "$scan_tmp"
+  local infected="$MINIPC_CLAM_INFECTED"
+  local scanned="$MINIPC_CLAM_SCANNED"
+  local errors="$MINIPC_CLAM_ERRORS"
+  local permission_denied=0
+  if grep -qi 'permission denied' "$scan_tmp" 2>/dev/null; then
+    permission_denied=1
+  fi
+  rm -f "$scan_tmp"
+  local total
+  total="$(python3 -c '
+import json
+from pathlib import Path
+p = Path("'"$PROGRESS"'")
+if p.is_file():
+    try:
+        print(int(json.loads(p.read_text(encoding="utf-8")).get("total_files") or 0))
+    except (json.JSONDecodeError, ValueError, OSError):
+        print(0)
+else:
+    print(0)
+' 2>/dev/null || echo 0)"
+
+  if [ "$finish_rc" -eq 2 ]; then
+    if [ "$permission_denied" -eq 1 ]; then
+      minipc_clam_progress_finish "$PROGRESS" "error" "ClamAV cannot read storage" "$scanned" "$infected" "$errors" "$total"
+    elif [ "$scanned" -eq 0 ]; then
+      minipc_clam_progress_finish "$PROGRESS" "error" "No files scanned" "$scanned" "$infected" "$errors" "$total"
+    else
+      minipc_clam_progress_finish "$PROGRESS" "error" "Scan errors (see log)" "$scanned" "$infected" "$errors" "$total"
+    fi
+    return 1
+  fi
+
+  if [ "$finish_rc" -eq 1 ] || [ "$infected" -gt 0 ]; then
+    minipc_clam_progress_finish "$PROGRESS" "infected" "$infected infected (quarantined)" "$scanned" "$infected" "$errors" "$total"
+    return 0
+  fi
+
+  minipc_clam_progress_finish "$PROGRESS" "done" "clean ($scanned files scanned)" "$scanned" "$infected" "$errors" "$total"
+}
+
+case "${1:-}" in
+  status)
+    if [ -f "$PROGRESS" ]; then
+      cat "$PROGRESS"
+    else
+      echo '{"active":false,"state":"idle","message":"No scan yet"}'
+    fi
+    ;;
+  start)
+    if ! resolve_scope "${2:-}"; then
+      emit_json false "" "" 0 "usage: minipc-clamscan-admin start downloads|shared" >&2
+      exit 1
+    fi
+    mkdir -p "$(dirname "$LOCK")"
+    if ! flock -n "$LOCK" -c true 2>/dev/null; then
+      emit_json false "$LABEL" "$TARGET" 0 "A scan is already running"
+      exit 1
+    fi
+    nohup flock "$LOCK" "$0" run "${2}" >>"$LOG" 2>&1 &
+    emit_json true "$LABEL" "$TARGET" 0 "Scan started — watch progress on the dashboard"
+    ;;
+  run)
+    run_scan_body "${2:-}"
+    ;;
+  downloads | shared)
+    run_scan_body "$1"
+    ;;
+  *)
+    emit_json false "" "" 0 "usage: minipc-clamscan-admin start downloads|shared | status" >&2
+    exit 1
+    ;;
+esac

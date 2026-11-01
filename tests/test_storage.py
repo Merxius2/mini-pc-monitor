@@ -1,6 +1,12 @@
 import unittest
 
-from src.storage import _human_bytes, _parse_mdstat, get_raid_status
+from src.storage import (
+    _human_bytes,
+    _is_read_only_mount,
+    _parse_mdadm_disks,
+    _parse_mdstat,
+    get_raid_status,
+)
 
 
 class HumanBytesTests(unittest.TestCase):
@@ -10,6 +16,28 @@ class HumanBytesTests(unittest.TestCase):
 
     def test_formats_small_usage(self) -> None:
         self.assertEqual(_human_bytes(2_200_000), "2.1 MB")
+
+
+class MountOptionsTests(unittest.TestCase):
+    def test_emergency_ro_is_read_only(self) -> None:
+        self.assertTrue(_is_read_only_mount("rw,noatime,emergency_ro"))
+
+    def test_rw_is_not_read_only(self) -> None:
+        self.assertFalse(_is_read_only_mount("rw,noatime"))
+
+
+class ParseMdadmDisksTests(unittest.TestCase):
+    def test_parses_active_sync_disks(self) -> None:
+        detail = """
+    Number   Major   Minor   RaidDevice State
+       0       8       48        0      active sync   /dev/sdd
+       1       8       64        1      active sync   /dev/sde
+"""
+        disks = _parse_mdadm_disks(detail)
+        self.assertEqual(len(disks), 2)
+        self.assertEqual(disks[0]["device"], "/dev/sdd")
+        self.assertEqual(disks[0]["level"], "ok")
+        self.assertEqual(disks[0]["dot"], "bull")
 
 
 class ParseMdstatTests(unittest.TestCase):

@@ -1,0 +1,11 @@
+{% if raid.has_alerts %}
+<div class="storage-alert-stack">
+  {% for alert in raid.alerts %}
+  <div class="storage-alert storage-alert-{{ alert.level }}">
+    <strong>{{ alert.title }}</strong>
+    <p>{{ alert.detail }}</p>
+    <a href="/storage#raid" class="storage-alert-link">RAID storage →</a>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}

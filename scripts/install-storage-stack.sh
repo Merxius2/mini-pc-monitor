@@ -21,6 +21,7 @@ sudo apt-get install -y samba transmission-daemon clamav clamav-daemon clamav-fr
 sudo groupadd -f "$GROUP"
 sudo usermod -aG "$GROUP" "$USER"
 sudo usermod -aG "$GROUP" debian-transmission 2>/dev/null || true
+sudo usermod -aG "$GROUP" clamav 2>/dev/null || true
 
 sudo mkdir -p \
   "$MOUNT/shared/Downloads" \
@@ -37,6 +38,10 @@ sudo cp "$ROOT/scripts/minipc-samba-admin" /usr/local/sbin/
 sudo chmod 755 /usr/local/sbin/minipc-samba-admin
 sudo cp "$ROOT/scripts/minipc-clamscan-download.sh" /usr/local/sbin/
 sudo chmod 755 /usr/local/sbin/minipc-clamscan-download.sh
+sudo cp "$ROOT/scripts/minipc-clamscan-admin" /usr/local/sbin/
+sudo chmod 755 /usr/local/sbin/minipc-clamscan-admin
+sudo cp "$ROOT/scripts/minipc-clamscan-lib.sh" /usr/local/sbin/
+sudo chmod 644 /usr/local/sbin/minipc-clamscan-lib.sh
 
 sudo mkdir -p /etc/samba/smb.d
 sudo cp "$ROOT/scripts/samba-storage.conf" /etc/samba/smb.d/storage.conf
@@ -98,6 +103,27 @@ if command -v ufw >/dev/null && sudo ufw status | grep -q "Status: active"; then
 fi
 
 sudo freshclam || true
+
+CLAMD_CONF="/etc/clamav/clamd.conf"
+if [ -f "$CLAMD_CONF" ]; then
+  for key in MaxFileSize StreamMaxLength PCREMaxFileSize; do
+    if grep -qE "^${key} " "$CLAMD_CONF"; then
+      sudo sed -i "s/^${key} .*/${key} 4096M/" "$CLAMD_CONF"
+    elif grep -qE "^#${key} " "$CLAMD_CONF"; then
+      sudo sed -i "s/^#${key} .*/${key} 4096M/" "$CLAMD_CONF"
+    else
+      echo "${key} 4096M" | sudo tee -a "$CLAMD_CONF" >/dev/null
+    fi
+  done
+fi
+
+sudo mkdir -p /etc/apparmor.d/local
+sudo cp "$ROOT/scripts/apparmor-transmission-daemon-local" /etc/apparmor.d/local/transmission-daemon
+sudo cp "$ROOT/scripts/apparmor-clamd-local" /etc/apparmor.d/local/usr.sbin.clamd
+if command -v apparmor_parser >/dev/null; then
+  sudo apparmor_parser -r /etc/apparmor.d/transmission 2>/dev/null || true
+  sudo apparmor_parser -r /etc/apparmor.d/usr.sbin.clamd 2>/dev/null || true
+fi
 
 sudo systemctl enable smbd nmbd transmission-daemon clamav-daemon clamav-freshclam
 sudo systemctl restart smbd nmbd

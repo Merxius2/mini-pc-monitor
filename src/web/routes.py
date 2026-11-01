@@ -9,7 +9,7 @@ from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 
 from src.azerothcore import get_azerothcore_status
-from src.clamav import get_clamav_status
+from src.clamav import get_clamav_scan_progress, get_clamav_status, start_clamav_scan
 from src.domoticz import get_domoticz_status
 from src.homeassistant import get_homeassistant_status
 from src.qr import qr_png_bytes
@@ -29,6 +29,7 @@ from src.services import (
 )
 from src.sleep_schedule import apply_schedule, get_schedule_status, set_schedule_enabled, suspend_now
 from src.system_updates import (
+    apply_full_system_updates,
     apply_system_updates,
     get_system_updates_status,
     refresh_system_updates,
@@ -158,6 +159,22 @@ def storage_overview_partial(request: Request):
         request,
         "partials/storage_overview.html",
         _storage_context(settings),
+    )
+
+
+@router.get("/partials/storage-alert", response_class=HTMLResponse)
+def storage_alert_partial(request: Request):
+    settings = _settings(request)
+    if not settings.storage.enabled:
+        return HTMLResponse("")
+    raid = get_raid_status(
+        md_device=settings.storage.md_device,
+        mount=settings.storage.mount,
+    )
+    return _templates(request).TemplateResponse(
+        request,
+        "partials/storage_alert.html",
+        {"raid": raid},
     )
 
 
@@ -404,6 +421,15 @@ def action_system_updates_apply(request: Request):
     return _management_updates_action_response(request, ok, message)
 
 
+@router.post("/actions/system-updates-full-apply")
+def action_system_updates_full_apply(request: Request):
+    settings = _settings(request)
+    if not settings.system_updates.enabled:
+        raise HTTPException(status_code=404, detail="System updates disabled")
+    ok, message, _ = apply_full_system_updates(settings.system_updates)
+    return _management_updates_action_response(request, ok, message)
+
+
 def _storage_action_response(request: Request, ok: bool, message: str):
     if request.headers.get("HX-Request"):
         return _templates(request).TemplateResponse(
@@ -502,6 +528,51 @@ def action_torrent_stop(request: Request, torrent_id: int = Form(...)):
     except Exception as exc:  # noqa: BLE001
         return _storage_action_response(request, False, str(exc))
     return _storage_action_response(request, True, "Torrent stopped")
+
+
+@router.get("/partials/clamav-scan-progress", response_class=HTMLResponse)
+def clamav_scan_progress_partial(request: Request):
+    settings = _settings(request)
+    if not settings.clamav.enabled:
+        raise HTTPException(status_code=404, detail="ClamAV disabled")
+    progress = get_clamav_scan_progress(settings.clamav)
+    headers: dict[str, str] = {}
+    if not progress.get("active") and progress.get("state") in ("done", "infected", "error"):
+        from datetime import datetime, timedelta, timezone
+
+        updated = progress.get("updated_at")
+        if isinstance(updated, str):
+            try:
+                ts = datetime.fromisoformat(updated.replace("Z", "+00:00"))
+                if datetime.now(timezone.utc) - ts < timedelta(seconds=20):
+                    headers["HX-Trigger"] = "refreshStorage"
+            except ValueError:
+                pass
+    return _templates(request).TemplateResponse(
+        request,
+        "partials/clamav_scan_progress.html",
+        {"progress": progress},
+        headers=headers,
+    )
+
+
+@router.post("/actions/clamav-scan")
+def action_clamav_scan(request: Request, scope: str = Form(...)):
+    settings = _settings(request)
+    if not settings.clamav.enabled:
+        raise HTTPException(status_code=404, detail="ClamAV disabled")
+    if scope not in ("downloads", "shared"):
+        return _storage_action_response(request, False, "Unknown scan scope")
+    ok, message = start_clamav_scan(settings.clamav, scope)  # type: ignore[arg-type]
+    if request.headers.get("HX-Request"):
+        response = _templates(request).TemplateResponse(
+            request,
+            "partials/action_result.html",
+            {"ok": ok, "message": message},
+            headers={"HX-Trigger": "refreshClamScanProgress, refreshStorage"},
+        )
+        return response
+    return _storage_action_response(request, ok, message)
 
 
 @router.get("/api/health")

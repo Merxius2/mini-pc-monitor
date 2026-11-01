@@ -1,0 +1,23 @@
+{% if progress.active %}
+<div class="clamav-scan-progress clamav-scan-progress-active">
+  <p class="clamav-scan-progress-title">
+    Scanning <strong>{{ progress.scope }}</strong>
+    {% if progress.state == 'counting' %} · counting files…
+    {% else %} · {{ progress.scanned_files }} / {{ progress.total_files }} files ({{ progress.percent }}%)
+    {% endif %}
+  </p>
+  <div class="clamav-progress-track" role="progressbar" aria-valuenow="{{ progress.percent }}" aria-valuemin="0" aria-valuemax="100">
+    <div class="clamav-progress-fill" style="width: {{ progress.percent }}%;"></div>
+  </div>
+  {% if progress.current_file %}
+  <p class="detail clamav-scan-current mono">{{ progress.current_file }}</p>
+  {% endif %}
+  {% if progress.infected > 0 %}
+  <p class="detail">Infected so far: {{ progress.infected }} (quarantined)</p>
+  {% endif %}
+</div>
+{% elif progress.state in ['done', 'infected', 'error'] and progress.message %}
+<div class="clamav-scan-progress clamav-scan-progress-finished">
+  <p class="detail">{{ progress.message }}</p>
+</div>
+{% endif %}

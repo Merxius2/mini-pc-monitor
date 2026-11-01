@@ -13,6 +13,11 @@
 </div>
 <div id="dashboardActionResult"></div>
 
+<div id="storageAlertPanel"
+     hx-get="/partials/storage-alert"
+     hx-trigger="load, every 30s"
+     hx-swap="innerHTML"></div>
+
 <div id="dashboardMetricsPanel"
      hx-get="/partials/dashboard-metrics"
      hx-trigger="load, every 15s"

@@ -1,0 +1,2 @@
+# Mini-PC Monitor: scan torrent downloads on RAID (included from usr.sbin.clamd)
+/mnt/storage/** r,

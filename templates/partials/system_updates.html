@@ -39,11 +39,20 @@
         hx-swap="innerHTML"
         hx-indicator="#systemUpdatesSpinner"
         hx-timeout="600000"
-        hx-confirm="Install all available upgrades now? This can take several minutes and may restart services.">
-    <button type="submit" class="btn btn-sm">Install updates</button>
+        hx-confirm="Run apt upgrade? Safe default: installs pending updates without removing packages. Held-back or phased updates may stay pending — use Full upgrade for those.">
+    <button type="submit" class="btn btn-sm">Upgrade</button>
+  </form>
+  <form class="inline-form"
+        hx-post="/actions/system-updates-full-apply"
+        hx-target="#managementUpdatesActionResult"
+        hx-swap="innerHTML"
+        hx-indicator="#systemUpdatesSpinner"
+        hx-timeout="600000"
+        hx-confirm="Run apt full-upgrade? This can install held-back packages and remove or replace dependencies. Run when games and Home Assistant can tolerate a longer install and possible service restarts.">
+    <button type="submit" class="btn btn-sm">Full upgrade</button>
   </form>
   {% endif %}
   <span id="systemUpdatesSpinner" class="htmx-indicator detail">Working…</span>
 </div>
-<p class="detail system-updates-hint">Uses apt on this machine · schedule long installs when WoW/HA are idle</p>
+<p class="detail system-updates-hint">Upgrade = apt upgrade · Full upgrade = apt full-upgrade (held-back packages) · schedule when WoW/HA are idle</p>
 {% endif %}

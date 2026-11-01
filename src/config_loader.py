@@ -129,6 +129,7 @@ class StorageConfig:
     enabled: bool = True
     mount: str = "/mnt/storage"
     md_device: str = "/dev/md0"
+    array_uuid: str = "df02ddd3:9732589a:79125c92:7f363879"
 
 
 @dataclass
@@ -182,6 +183,8 @@ class ClamAvConfig:
     daemon_unit: str = "clamav-daemon.service"
     freshclam_unit: str = "clamav-freshclam.service"
     scan_log: str = "/mnt/storage/logs/clamav-scan.log"
+    scan_progress_file: str = "/mnt/storage/logs/clamav-scan.progress.json"
+    helper_script: str = "/usr/local/sbin/minipc-clamscan-admin"
 
 
 @dataclass

@@ -5,6 +5,7 @@ set -euo pipefail
 status_json() {
   python3 <<'PY'
 import json
+import re
 import subprocess
 from pathlib import Path
 
@@ -45,22 +46,102 @@ print(
 PY
 }
 
+run_apt_apply_json() {
+  local mode="$1"
+  python3 - "$mode" <<'PY'
+import json
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+mode = sys.argv[1]
+if mode not in ("upgrade", "full-upgrade"):
+    print(json.dumps({"ok": False, "error": f"invalid mode: {mode}"}))
+    raise SystemExit(1)
+
+reboot_required = Path("/var/run/reboot-required").is_file()
+reboot_hint = None
+pkgs_file = Path("/var/run/reboot-required.pkgs")
+if pkgs_file.is_file():
+    reboot_hint = pkgs_file.read_text(encoding="utf-8", errors="replace").strip()
+
+apt = subprocess.run(
+    ["apt-get", "-y", mode],
+    capture_output=True,
+    text=True,
+    check=False,
+    env={**dict(subprocess.os.environ), "DEBIAN_FRONTEND": "noninteractive"},
+)
+output = (apt.stdout or "") + (apt.stderr or "")
+
+upgraded = installed = removed = not_upgraded = 0
+summary = None
+m = re.search(
+    r"(\d+) upgraded,\s*(\d+) newly installed,\s*(\d+) to remove and (\d+) not upgraded",
+    output,
+)
+if m:
+    upgraded, installed, removed, not_upgraded = (int(m.group(i)) for i in range(1, 5))
+    summary = m.group(0).strip()
+
+phased = "deferred due to phasing" in output
+kept_back = "have been kept back" in output
+
+list_proc = subprocess.run(
+    ["apt", "list", "--upgradable"],
+    capture_output=True,
+    text=True,
+    check=False,
+)
+packages: list[dict[str, str]] = []
+for line in (list_proc.stdout or "").splitlines():
+    if not line or line.startswith("Listing"):
+        continue
+    parts = line.split()
+    if len(parts) < 2:
+        continue
+    packages.append({"name": parts[0].split("/")[0], "version": parts[1]})
+
+print(
+    json.dumps(
+        {
+            "ok": apt.returncode == 0,
+            "mode": mode,
+            "count": len(packages),
+            "packages": packages,
+            "reboot_required": reboot_required,
+            "reboot_hint": reboot_hint,
+            "upgraded": upgraded,
+            "installed": installed,
+            "removed": removed,
+            "not_upgraded": not_upgraded,
+            "apt_summary": summary,
+            "phased": phased,
+            "kept_back": kept_back,
+        }
+    )
+)
+PY
+}
+
 case "${1:-}" in
   status)
     status_json
     ;;
   refresh)
     export DEBIAN_FRONTEND=noninteractive
-    apt-get update -qq
+    apt-get update -qq >/dev/null 2>&1 || true
     status_json
     ;;
   upgrade)
-    export DEBIAN_FRONTEND=noninteractive
-    apt-get upgrade -y
-    status_json
+    run_apt_apply_json upgrade
+    ;;
+  full-upgrade)
+    run_apt_apply_json full-upgrade
     ;;
   *)
-    echo "Usage: $0 status|refresh|upgrade" >&2
+    echo "Usage: $0 status|refresh|upgrade|full-upgrade" >&2
     exit 1
     ;;
 esac

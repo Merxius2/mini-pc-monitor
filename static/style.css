@@ -372,9 +372,211 @@
     .pnl-grid { grid-template-columns: 1fr; }
   }
 
+  /* —— Mobile layout (sidebar → top bar + drawer menu) —— */
+  .mobile-topbar,
+  .mobile-drawer {
+    display: none;
+  }
+
   @media (max-width: 1100px) {
     .layout { grid-template-columns: 1fr; }
     .sidebar { display: none; }
+
+    .mobile-topbar {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      padding: 0.65rem 1rem;
+      padding-top: max(0.65rem, env(safe-area-inset-top));
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .mobile-menu-btn {
+      flex-shrink: 0;
+      min-height: 44px;
+      min-width: 44px;
+      padding: 0 0.85rem;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .mobile-topbar-title {
+      min-width: 0;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.1rem;
+    }
+
+    .mobile-topbar-title strong {
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .mobile-topbar-title span {
+      font-size: 0.72rem;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .mobile-drawer {
+      display: block;
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      pointer-events: none;
+      visibility: hidden;
+      transition: visibility 0.2s ease;
+    }
+
+    .mobile-drawer-open {
+      pointer-events: auto;
+      visibility: visible;
+    }
+
+    .mobile-drawer-backdrop {
+      position: absolute;
+      inset: 0;
+      border: none;
+      background: rgba(0, 0, 0, 0.55);
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      cursor: pointer;
+    }
+
+    .mobile-drawer-open .mobile-drawer-backdrop {
+      opacity: 1;
+    }
+
+    .mobile-drawer-panel {
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: min(300px, 88vw);
+      max-width: 100%;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      transform: translateX(-100%);
+      transition: transform 0.22s ease;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .mobile-drawer-open .mobile-drawer-panel {
+      transform: translateX(0);
+    }
+
+    .mobile-drawer-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 1rem 1rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .mobile-drawer-head h2 {
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .mobile-drawer-host {
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+
+    .mobile-drawer-close {
+      min-width: 44px;
+      min-height: 44px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-size: 1.75rem;
+      line-height: 1;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .mobile-drawer-nav {
+      flex: 0 0 auto;
+      padding: 0.5rem 0;
+    }
+
+    .mobile-drawer-nav a {
+      min-height: 48px;
+      padding-top: 0.75rem;
+      padding-bottom: 0.75rem;
+    }
+
+    .mobile-drawer .status-panel {
+      flex: 1;
+      overflow-y: auto;
+      border-top: 1px solid var(--border);
+    }
+
+    body.mobile-menu-open {
+      overflow: hidden;
+    }
+
+    .main {
+      padding: 1rem 1rem 1.25rem;
+      padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+    }
+
+    .live-banner {
+      font-size: 0.65rem;
+      padding: 0.35rem 0.75rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .top-bar {
+      margin-bottom: 1rem;
+    }
+
+    .top-bar h2 {
+      font-size: 1.15rem;
+    }
+
+    .top-bar p {
+      font-size: 0.8rem;
+    }
+
+    .btn,
+    .btn-sm {
+      min-height: 44px;
+      padding-top: 0.55rem;
+      padding-bottom: 0.55rem;
+    }
+
+    .inline-form .btn-sm {
+      min-height: 40px;
+    }
+
+    .system-updates-actions,
+    .clamav-scan-actions {
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
   }
 
   .pnl-card {
@@ -785,6 +987,7 @@
   }
   .signal-bull { background: var(--green); }
   .signal-bear { background: var(--red); }
+  .signal-amber { background: var(--amber); }
   .signal-neutral { background: var(--muted); }
 
   .live-banner {
@@ -1506,6 +1709,105 @@
     background: var(--red-dim);
   }
 
+  .storage-alert-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    margin-bottom: 1rem;
+  }
+
+  .storage-alert-stack-page {
+    padding: 0 0 0.25rem;
+  }
+
+  .storage-alert {
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    font-size: 0.8rem;
+    line-height: 1.45;
+  }
+
+  .storage-alert strong {
+    display: block;
+    margin-bottom: 0.35rem;
+  }
+
+  .storage-alert p {
+    color: var(--muted);
+    margin: 0;
+  }
+
+  .storage-alert-warn {
+    background: var(--red-dim);
+    border-color: rgba(239, 68, 68, 0.45);
+  }
+
+  .storage-alert-warn strong {
+    color: var(--red);
+  }
+
+  .storage-alert-amber {
+    background: var(--amber-dim);
+    border-color: rgba(245, 158, 11, 0.45);
+  }
+
+  .storage-alert-amber strong {
+    color: var(--amber);
+  }
+
+  .storage-alert-link {
+    display: inline-block;
+    margin-top: 0.45rem;
+    font-size: 0.75rem;
+    color: var(--cyan);
+  }
+
+  .raid-health-panel {
+    padding: 0 1.15rem 1rem;
+    border-top: 1px solid var(--border);
+    margin-top: 0.25rem;
+    padding-top: 0.85rem;
+  }
+
+  .raid-health-list {
+    list-style: none;
+    margin: 0.5rem 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+
+  .raid-health-item {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.4rem 0.55rem;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.78rem;
+  }
+
+  .raid-health-item .signal-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .raid-health-state {
+    color: var(--muted);
+    font-size: 0.72rem;
+    text-align: right;
+  }
+
+  .raid-health-legend {
+    margin-top: 0.55rem;
+    font-size: 0.68rem;
+  }
+
   .storage-section { margin-bottom: 1rem; }
 
   .storage-grid {
@@ -1771,6 +2073,40 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0 1.15rem 0.85rem;
+  }
+
+  .clamav-scan-progress {
+    margin: 0 1.15rem 0.85rem;
+    padding: 0.75rem 0.85rem;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .clamav-scan-progress-title {
+    margin: 0 0 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  .clamav-progress-track {
+    height: 8px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+  }
+
+  .clamav-progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #3d8bfd, #5eead4);
+    transition: width 0.4s ease;
+  }
+
+  .clamav-scan-current {
+    margin: 0.45rem 0 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .system-updates-hint {

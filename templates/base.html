@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#141922" />
   <title>{% block title %}{{ page_title }} — Mini-PC Monitor{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -14,6 +15,40 @@
 <body>
   <div id="liveBanner" class="live-banner">● Live — {{ status.hostname }} · CPU {{ status.host.cpu_percent }}% · RAM {{ status.host.memory_percent }}%</div>
 
+  <header class="mobile-topbar" aria-label="Page header">
+    <button type="button" class="mobile-menu-btn" id="mobileMenuOpen" aria-label="Open menu" aria-controls="mobileDrawer" aria-expanded="false">Menu</button>
+    <div class="mobile-topbar-title">
+      <strong>{{ page_title }}</strong>
+      <span>{{ status.hostname }}</span>
+    </div>
+  </header>
+
+  <div id="mobileDrawer" class="mobile-drawer" aria-hidden="true">
+    <button type="button" class="mobile-drawer-backdrop" id="mobileMenuBackdrop" aria-label="Close menu" tabindex="-1"></button>
+    <div class="mobile-drawer-panel">
+      <div class="mobile-drawer-head">
+        <div>
+          <h2>Mini-PC Monitor</h2>
+          <span class="mobile-drawer-host">{{ status.hostname }}</span>
+        </div>
+        <button type="button" class="mobile-drawer-close" id="mobileMenuClose" aria-label="Close menu">×</button>
+      </div>
+      <nav class="nav mobile-drawer-nav">
+        {% include "partials/site_nav.html" %}
+      </nav>
+      <div class="status-panel">
+        <div id="mobileHostMetricsPanel"
+             hx-get="/partials/host-metrics"
+             hx-trigger="load, every 15s"
+             hx-swap="innerHTML">
+          {% with host=status.host %}
+          {% include "partials/host_metrics.html" %}
+          {% endwith %}
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="layout">
     <aside class="sidebar">
       <div class="logo">
@@ -22,10 +57,7 @@
         <div class="trader-badge">◆ Uptime {{ status.uptime }}</div>
       </div>
       <nav class="nav">
-        <a href="/" class="{% if active_nav == 'dashboard' %}active{% endif %}">Dashboard</a>
-        <a href="/services" class="{% if active_nav == 'services' %}active{% endif %}">Services</a>
-        <a href="/storage" class="{% if active_nav == 'storage' %}active{% endif %}">RAID storage</a>
-        <a href="/management" class="{% if active_nav == 'management' %}active{% endif %}">Mini-PC management</a>
+        {% include "partials/site_nav.html" %}
       </nav>
       <div class="status-panel">
         <div id="hostMetricsPanel"
@@ -43,6 +75,29 @@
       {% block main %}{% endblock %}
     </main>
   </div>
+  <script>
+    (function () {
+      var drawer = document.getElementById("mobileDrawer");
+      var openBtn = document.getElementById("mobileMenuOpen");
+      var closeBtn = document.getElementById("mobileMenuClose");
+      var backdrop = document.getElementById("mobileMenuBackdrop");
+      if (!drawer || !openBtn) return;
+
+      function setOpen(open) {
+        drawer.classList.toggle("mobile-drawer-open", open);
+        drawer.setAttribute("aria-hidden", open ? "false" : "true");
+        openBtn.setAttribute("aria-expanded", open ? "true" : "false");
+        document.body.classList.toggle("mobile-menu-open", open);
+      }
+
+      openBtn.addEventListener("click", function () { setOpen(true); });
+      if (closeBtn) closeBtn.addEventListener("click", function () { setOpen(false); });
+      if (backdrop) backdrop.addEventListener("click", function () { setOpen(false); });
+      drawer.querySelectorAll(".mobile-drawer-nav a").forEach(function (link) {
+        link.addEventListener("click", function () { setOpen(false); });
+      });
+    })();
+  </script>
   {% block scripts %}{% endblock %}
 </body>
 </html>

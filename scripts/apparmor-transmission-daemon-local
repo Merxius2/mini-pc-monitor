@@ -1,0 +1,5 @@
+# Mini-PC Monitor: Transmission download dirs on RAID (included from transmission-daemon profile)
+/mnt/storage/** rw,
+
+# script-torrent-done: clamdscan + logging (runs unconfined; base profile only allows /usr/bin/transmission-daemon)
+/usr/local/sbin/minipc-clamscan-download.sh PUx,

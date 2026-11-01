@@ -109,6 +109,7 @@ storage:
   enabled: true
   mount: /mnt/storage
   md_device: /dev/md0
+  array_uuid: df02ddd3:9732589a:79125c92:7f363879
 
 samba:
   enabled: true
@@ -132,6 +133,8 @@ clamav:
   daemon_unit: clamav-daemon.service
   freshclam_unit: clamav-freshclam.service
   scan_log: /mnt/storage/logs/clamav-scan.log
+  scan_progress_file: /mnt/storage/logs/clamav-scan.progress.json
+  helper_script: /usr/local/sbin/minipc-clamscan-admin
 
 system_updates:
   enabled: true

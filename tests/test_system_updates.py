@@ -3,7 +3,34 @@ import unittest
 from unittest.mock import patch
 
 from src.config_loader import SystemUpdatesConfig
-from src.system_updates import get_system_updates_status
+from src.system_updates import _format_upgrade_message, _parse_helper_json, get_system_updates_status
+
+
+class ParseHelperJsonTests(unittest.TestCase):
+    def test_extracts_json_after_apt_noise(self) -> None:
+        text = "Reading package lists...\n{\"ok\": true, \"count\": 0}\n"
+        data = _parse_helper_json(text)
+        self.assertTrue(data["ok"])
+
+
+class UpgradeMessageTests(unittest.TestCase):
+    def test_nothing_installed_but_pending(self) -> None:
+        msg = _format_upgrade_message(
+            {
+                "upgraded": 0,
+                "installed": 0,
+                "count": 3,
+                "not_upgraded": 3,
+                "phased": True,
+                "kept_back": True,
+            }
+        )
+        self.assertIn("Nothing was installed", msg)
+        self.assertIn("3 package(s) still", msg)
+
+    def test_some_installed(self) -> None:
+        msg = _format_upgrade_message({"upgraded": 2, "installed": 0, "count": 1})
+        self.assertIn("Installed: 2 upgraded", msg)
 
 
 class SystemUpdatesStatusTests(unittest.TestCase):

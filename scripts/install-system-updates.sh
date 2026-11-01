@@ -12,6 +12,7 @@ sudo tee "$SUDOERS" >/dev/null <<'EOF'
 sylvester ALL=(ALL) NOPASSWD: /usr/local/sbin/minipc-system-update status
 sylvester ALL=(ALL) NOPASSWD: /usr/local/sbin/minipc-system-update refresh
 sylvester ALL=(ALL) NOPASSWD: /usr/local/sbin/minipc-system-update upgrade
+sylvester ALL=(ALL) NOPASSWD: /usr/local/sbin/minipc-system-update full-upgrade
 EOF
 sudo chmod 440 "$SUDOERS"
 sudo visudo -cf "$SUDOERS"
