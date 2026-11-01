@@ -134,7 +134,11 @@ clamav:
   freshclam_unit: clamav-freshclam.service
   scan_log: /mnt/storage/logs/clamav-scan.log
   scan_progress_file: /mnt/storage/logs/clamav-scan.progress.json
+  scan_history_file: /mnt/storage/logs/clamav-scan-history.jsonl
   helper_script: /usr/local/sbin/minipc-clamscan-admin
+  schedule:
+    time: "03:30"
+    scope: shared
 
 system_updates:
   enabled: true
@@ -155,6 +159,7 @@ video_download:
     - music.youtube.com
     - youtu.be
   download_timeout_seconds: 3600
+  delete_after_push_seconds: 600
 
 azerothcore:
   enabled: true

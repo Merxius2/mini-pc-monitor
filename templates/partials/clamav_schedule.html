@@ -1,0 +1,69 @@
+{% set sched = clam.schedule %}
+<h3 class="storage-subheading">Full scan schedule</h3>
+<div class="schedule-status-block {% if sched.enabled %}daytime{% else %}disabled{% endif %}">
+  <div class="schedule-status-indicator">
+    <span class="schedule-pulse"></span>
+  </div>
+  <div class="schedule-status-text">
+    <h4>{% if sched.enabled %}Scheduled full scans active{% else %}Scheduled full scans off{% endif %}</h4>
+    <p>
+      {% if sched.enabled %}
+        Daily at <strong>{{ sched.time }}</strong> ·
+        {% if sched.scope == 'shared' %}entire shared folder{% else %}Downloads folder{% endif %}
+      {% else %}
+        Enable to run a full library scan automatically (separate from per-torrent scans)
+      {% endif %}
+    </p>
+  </div>
+  {% if sched.manage %}
+  <form class="inline-form schedule-toggle-form"
+        hx-post="/actions/toggle-clamav-schedule"
+        hx-target="#storageActionResult"
+        hx-swap="innerHTML">
+    <input type="hidden" name="enabled" value="{{ 'false' if sched.enabled else 'true' }}" />
+    <button type="submit"
+            class="bot-toggle service-toggle"
+            aria-checked="{{ 'true' if sched.enabled else 'false' }}"
+            aria-label="{% if sched.enabled %}Disable{% else %}Enable{% endif %} ClamAV full scan schedule"
+            title="{% if sched.enabled %}Disable{% else %}Enable{% endif %} scheduled full scans">
+      <span class="bot-toggle-knob"></span>
+    </button>
+  </form>
+  {% endif %}
+</div>
+
+<div class="schedule-grid clamav-schedule-grid">
+  <div class="schedule-card">
+    <div class="label">Next run</div>
+    <div class="value mono">{{ sched.next_run }}</div>
+    <div class="sub">{{ sched.timer_unit }}</div>
+  </div>
+  <div class="schedule-card">
+    <div class="label">Scope</div>
+    <div class="value">{% if sched.scope == 'shared' %}Shared folder{% else %}Downloads{% endif %}</div>
+    <div class="sub">{{ sched.service_unit }}</div>
+  </div>
+</div>
+
+{% if sched.manage %}
+<form class="schedule-form clamav-schedule-form"
+      hx-post="/actions/update-clamav-schedule"
+      hx-target="#storageActionResult"
+      hx-swap="innerHTML">
+  <div class="schedule-form-row">
+    <label>
+      <span>Run at</span>
+      <input type="time" name="scan_time" value="{{ sched.time if sched.time != '—' else '03:30' }}" required />
+    </label>
+    <label>
+      <span>Scan target</span>
+      <select name="scope">
+        <option value="downloads" {% if sched.scope == 'downloads' %}selected{% endif %}>Downloads folder</option>
+        <option value="shared" {% if sched.scope == 'shared' %}selected{% endif %}>Entire shared folder</option>
+      </select>
+    </label>
+    <button type="submit" class="btn btn-primary">Save schedule</button>
+  </div>
+  <p class="schedule-form-hint">Updates systemd timer drop-ins. Large shared-folder scans can take hours.</p>
+</form>
+{% endif %}

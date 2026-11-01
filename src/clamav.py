@@ -7,6 +7,7 @@ import subprocess
 from pathlib import Path
 from typing import Any, Literal
 
+from src.clamav_schedule import get_clamav_schedule_status
 from src.config_loader import ClamAvConfig
 
 ScanScope = Literal["downloads", "shared"]
@@ -56,6 +57,8 @@ def get_clamav_status(config: ClamAvConfig) -> dict[str, Any]:
             pass
 
     progress = get_clamav_scan_progress(config)
+    schedule = get_clamav_schedule_status(config)
+    scan_history = list_scan_history(config)
 
     overall = "ok" if daemon_active == "active" else "warn"
     return {
@@ -68,8 +71,78 @@ def get_clamav_status(config: ClamAvConfig) -> dict[str, Any]:
         "scan_log": str(log_path),
         "log_tail": log_tail,
         "scan_progress": progress,
+        "schedule": schedule,
+        "scan_history": scan_history,
         "max_file_size": _clamd_max_file_size_label(),
     }
+
+
+def _format_history_timestamp(raw: str | None) -> str:
+    if not raw:
+        return "—"
+    from datetime import datetime
+
+    try:
+        ts = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        if ts.tzinfo is not None:
+            ts = ts.astimezone()
+        return ts.strftime("%a %d %b %Y · %H:%M")
+    except ValueError:
+        return raw
+
+
+def _history_scope_label(scope: str) -> str:
+    if scope == "shared":
+        return "Shared folder"
+    if scope == "downloads":
+        return "Downloads"
+    return scope or "—"
+
+
+def _history_trigger_label(trigger: str) -> str:
+    labels = {
+        "scheduled": "Scheduled",
+        "manual": "Manual",
+        "torrent": "Torrent",
+    }
+    return labels.get(trigger or "", trigger or "—")
+
+
+def list_scan_history(config: ClamAvConfig) -> list[dict[str, Any]]:
+    path = Path(config.scan_history_file)
+    if not path.is_file():
+        return []
+    try:
+        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return []
+    limit = max(1, int(config.max_history_shown))
+    entries: list[dict[str, Any]] = []
+    for line in lines[-limit:]:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(row, dict):
+            continue
+        state = str(row.get("state") or "")
+        entries.append(
+            {
+                **row,
+                "finished_label": _format_history_timestamp(row.get("finished_at")),
+                "scope_label": _history_scope_label(str(row.get("scope") or "")),
+                "trigger_label": _history_trigger_label(str(row.get("trigger") or "")),
+                "result_label": (row.get("message") or state or "—")[:120],
+                "result_tone": "warn"
+                if state == "infected" or int(row.get("infected") or 0) > 0
+                else ("bad" if state == "error" else "ok"),
+            }
+        )
+    entries.reverse()
+    return entries
 
 
 def get_clamav_scan_progress(config: ClamAvConfig) -> dict[str, Any]:

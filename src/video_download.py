@@ -6,18 +6,20 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import threading
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Literal
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 from src.config_loader import VideoDownloadConfig
 
 _JOB_LOCK = threading.Lock()
 _JOBS: dict[str, "DownloadJob"] = {}
+_DELETE_TIMERS: dict[str, threading.Timer] = {}
 
 DownloadFormat = Literal["video", "audio"]
 
@@ -28,9 +30,24 @@ class DownloadJob:
     url: str
     status: str  # queued | running | done | error
     format: DownloadFormat = "video"
+    push_to_device: bool = False
+    delete_after_push: bool = False
+    output_category: str = ""
+    output_name: str = ""
+    storage_purge_at: datetime | None = None
+    storage_purged: bool = False
     message: str = ""
     started_at: datetime | None = None
     finished_at: datetime | None = None
+
+    @property
+    def file_url(self) -> str | None:
+        if self.status != "done" or not self.output_name or not self.output_category:
+            return None
+        return (
+            f"/video-download/files/{self.output_category}/"
+            f"{quote(self.output_name, safe='')}"
+        )
 
 
 def _yt_dlp_cmd(config: VideoDownloadConfig) -> list[str]:
@@ -54,6 +71,50 @@ def _host_allowed(url: str, allowed_hosts: list[str]) -> bool:
         if host == pattern or host.endswith("." + pattern):
             return True
     return False
+
+
+def parse_form_bool(raw: str | None) -> bool:
+    if raw is None:
+        return False
+    if isinstance(raw, bool):
+        return raw
+    return (raw or "").strip().lower() in ("1", "true", "yes", "on")
+
+
+def parse_push_mode(raw: str | None) -> tuple[bool, bool]:
+    """Return (push_to_device, delete_after_push). Purge only when push is on."""
+    mode = (raw or "off").strip().lower()
+    if mode in ("push_purge", "push+purge", "push_and_purge"):
+        return True, True
+    if mode in ("push", "device", "on", "true", "1"):
+        return True, False
+    return False, False
+
+
+def media_category_for_format(download_format: DownloadFormat) -> str:
+    return "music" if download_format == "audio" else "video"
+
+
+def resolve_media_file(
+    config: VideoDownloadConfig,
+    category: str,
+    file_path: str,
+) -> Path | None:
+    if category not in ("video", "music"):
+        return None
+    root = Path(
+        config.video_dir if category == "video" else config.music_dir
+    ).resolve()
+    if not file_path or file_path.startswith("/") or ".." in file_path.split("/"):
+        return None
+    try:
+        target = (root / file_path).resolve()
+        target.relative_to(root)
+    except (OSError, ValueError):
+        return None
+    if not target.is_file():
+        return None
+    return target
 
 
 def normalize_download_format(raw: str | None) -> DownloadFormat:
@@ -126,6 +187,75 @@ def reset_jobs_display() -> None:
     """Test helper: drop all jobs from memory."""
     with _JOB_LOCK:
         _JOBS.clear()
+    for timer in list(_DELETE_TIMERS.values()):
+        timer.cancel()
+    _DELETE_TIMERS.clear()
+
+
+def _cancel_delete_timer(job_id: str) -> None:
+    timer = _DELETE_TIMERS.pop(job_id, None)
+    if timer:
+        timer.cancel()
+
+
+def _purge_file_from_storage(
+    config: VideoDownloadConfig,
+    job_id: str,
+    category: str,
+    output_name: str,
+) -> None:
+    target = resolve_media_file(config, category, output_name)
+    removed = False
+    if target:
+        try:
+            target.unlink()
+            removed = True
+        except OSError:
+            removed = False
+        for extra in (target.with_suffix(".jpg"), target.with_suffix(".webp")):
+            if extra.is_file() and extra != target:
+                try:
+                    extra.unlink()
+                except OSError:
+                    pass
+    with _JOB_LOCK:
+        job = _JOBS.get(job_id)
+        if not job:
+            return
+        job.storage_purged = removed
+        if removed:
+            suffix = " · Removed from storage"
+            if suffix not in (job.message or ""):
+                job.message = (job.message or "") + suffix
+        else:
+            suffix = " · Storage cleanup skipped (file missing)"
+            if suffix not in (job.message or ""):
+                job.message = (job.message or "") + suffix
+
+
+def schedule_storage_delete(
+    config: VideoDownloadConfig,
+    job_id: str,
+    category: str,
+    output_name: str,
+    delay_seconds: int,
+) -> datetime | None:
+    if delay_seconds <= 0 or not output_name or not category:
+        return None
+    _cancel_delete_timer(job_id)
+    purge_at = datetime.now().timestamp() + delay_seconds
+    purge_dt = datetime.fromtimestamp(purge_at)
+
+    def _fire() -> None:
+        _DELETE_TIMERS.pop(job_id, None)
+        _purge_file_from_storage(config, job_id, category, output_name)
+
+    timer = threading.Timer(delay_seconds, _fire)
+    timer.daemon = True
+    timer.name = f"video-download-purge-{job_id}"
+    _DELETE_TIMERS[job_id] = timer
+    timer.start()
+    return purge_dt
 
 
 def _set_job(job_id: str, **kwargs: object) -> None:
@@ -170,16 +300,68 @@ def build_yt_dlp_download_command(
     return cmd
 
 
+def _newest_file_since(directory: Path, since: datetime) -> Path | None:
+    if not directory.is_dir():
+        return None
+    cutoff = since.timestamp() - 1.0
+    newest: tuple[float, Path] | None = None
+    for path in directory.rglob("*"):
+        if not path.is_file():
+            continue
+        if path.suffix.lower() in {".part", ".ytdl", ".temp"}:
+            continue
+        try:
+            mtime = path.stat().st_mtime
+        except OSError:
+            continue
+        if mtime < cutoff:
+            continue
+        if newest is None or mtime > newest[0]:
+            newest = (mtime, path)
+    return newest[1] if newest else None
+
+
+def _output_name_from_yt_dlp(
+    path_file: Path,
+    out_dir: Path,
+    started_at: datetime,
+) -> str:
+    if path_file.is_file():
+        try:
+            lines = [
+                ln.strip()
+                for ln in path_file.read_text(encoding="utf-8", errors="replace").splitlines()
+                if ln.strip()
+            ]
+        except OSError:
+            lines = []
+        for line in reversed(lines):
+            candidate = Path(line.strip('"\''))
+            try:
+                if candidate.is_file():
+                    candidate.resolve().relative_to(out_dir.resolve())
+                    return candidate.name
+            except (OSError, ValueError):
+                continue
+    fallback = _newest_file_since(out_dir, started_at)
+    return fallback.name if fallback else ""
+
+
 def _run_download(
     job_id: str,
     url: str,
     config: VideoDownloadConfig,
     download_format: DownloadFormat,
 ) -> None:
-    _set_job(job_id, status="running", started_at=datetime.now())
+    started = datetime.now()
+    _set_job(job_id, status="running", started_at=started)
     out_dir = output_dir_for_format(config, download_format)
     out_dir.mkdir(parents=True, exist_ok=True)
+    path_file = Path(tempfile.gettempdir()) / f"vd-path-{job_id}.txt"
+    path_file.unlink(missing_ok=True)
     cmd = build_yt_dlp_download_command(url, config, download_format)
+    url_arg = cmd.pop()
+    cmd.extend(["--print-to-file", "after_move:filepath", str(path_file), url_arg])
     try:
         result = subprocess.run(
             cmd,
@@ -189,6 +371,7 @@ def _run_download(
             timeout=config.download_timeout_seconds,
         )
     except subprocess.TimeoutExpired:
+        path_file.unlink(missing_ok=True)
         _set_job(
             job_id,
             status="error",
@@ -197,10 +380,12 @@ def _run_download(
         )
         return
     except OSError as exc:
+        path_file.unlink(missing_ok=True)
         _set_job(job_id, status="error", message=str(exc), finished_at=datetime.now())
         return
 
     if result.returncode != 0:
+        path_file.unlink(missing_ok=True)
         err = (result.stderr or result.stdout or "Download failed").strip()
         err = re.sub(r"\s+", " ", err)
         if len(err) > 400:
@@ -208,18 +393,46 @@ def _run_download(
         _set_job(job_id, status="error", message=err, finished_at=datetime.now())
         return
 
+    category = media_category_for_format(download_format)
+    output_name = _output_name_from_yt_dlp(path_file, out_dir, started)
+    path_file.unlink(missing_ok=True)
     done_msg = (
         f"Saved MP3 to {config.music_dir}"
         if download_format == "audio"
         else f"Saved video to {config.video_dir}"
     )
-    _set_job(job_id, status="done", message=done_msg, finished_at=datetime.now())
+    purge_at: datetime | None = None
+    with _JOB_LOCK:
+        job = _JOBS.get(job_id)
+        delete_after = bool(job and job.delete_after_push and job.push_to_device)
+    if delete_after and output_name:
+        minutes = max(1, config.delete_after_push_seconds // 60)
+        purge_at = schedule_storage_delete(
+            config,
+            job_id,
+            category,
+            output_name,
+            config.delete_after_push_seconds,
+        )
+        if purge_at:
+            done_msg += f" · Will remove from storage in {minutes} min"
+    _set_job(
+        job_id,
+        status="done",
+        message=done_msg,
+        finished_at=datetime.now(),
+        output_category=category,
+        output_name=output_name,
+        storage_purge_at=purge_at,
+    )
 
 
 def start_download(
     url: str,
     config: VideoDownloadConfig,
     download_format: DownloadFormat | str | None = "video",
+    push_to_device: bool = False,
+    delete_after_push: bool = False,
 ) -> tuple[bool, str, str | None]:
     fmt = normalize_download_format(
         download_format if isinstance(download_format, str) else "video"
@@ -234,7 +447,14 @@ def start_download(
         return False, ver_err or "yt-dlp is not installed", None
 
     job_id = uuid.uuid4().hex[:12]
-    job = DownloadJob(id=job_id, url=url.strip(), status="queued", format=fmt)
+    job = DownloadJob(
+        id=job_id,
+        url=url.strip(),
+        status="queued",
+        format=fmt,
+        push_to_device=push_to_device,
+        delete_after_push=delete_after_push and push_to_device,
+    )
     with _JOB_LOCK:
         _JOBS[job_id] = job
         if len(_JOBS) > 50:

@@ -2026,6 +2026,99 @@
     margin-bottom: 0;
   }
 
+  .video-download-form .video-download-device-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.65rem 0.85rem;
+    width: 100%;
+    margin-top: 0.35rem;
+  }
+
+  .video-download-device-switch {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    cursor: pointer;
+    margin: 0;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    min-height: 44px;
+    padding-right: 0.15rem;
+  }
+
+  .video-download-device-checkbox {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 52px;
+    height: 32px;
+    margin: auto 0;
+    opacity: 0;
+    cursor: pointer;
+    z-index: 2;
+  }
+
+  .video-download-device-track {
+    position: relative;
+    display: block;
+    width: 52px;
+    height: 32px;
+    pointer-events: none;
+    border-radius: 999px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    transition: background 0.2s, border-color 0.2s;
+    flex-shrink: 0;
+  }
+
+  .video-download-device-knob {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--muted);
+    transition: transform 0.2s, background 0.2s;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  }
+
+  .video-download-device-switch:has(input:checked) .video-download-device-track {
+    background: rgba(34, 197, 94, 0.2);
+    border-color: rgba(34, 197, 94, 0.45);
+  }
+
+  .video-download-device-switch:has(input:checked) .video-download-device-knob {
+    transform: translateX(20px);
+    background: var(--green);
+  }
+
+  .video-download-device-hint {
+    font-size: 0.75rem;
+    margin: 0;
+    pointer-events: none;
+  }
+
+  .video-download-form .push-device-segment .format-segment-option span {
+    padding: 0.38rem 0.75rem;
+    font-size: 0.78rem;
+  }
+
+  .video-download-device-row .video-download-device-hint {
+    flex: 1 1 100%;
+    margin-top: 0.15rem;
+  }
+
+  .video-download-page .video-download-job-row {
+    flex-wrap: wrap;
+  }
+
+  .video-download-save-device {
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
   .video-download-submit {
     min-width: 8.5rem;
     padding: 0.55rem 1.25rem;
@@ -2312,6 +2405,73 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .storage-subheading {
+    margin: 1rem 1.15rem 0.5rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.55);
+  }
+
+  .clamav-schedule-grid {
+    margin-top: 0.35rem;
+  }
+
+  .clamav-schedule-form {
+    margin-bottom: 0.5rem;
+  }
+
+  .clamav-history-wrap {
+    margin: 0 1.15rem 0.85rem;
+    overflow-x: auto;
+  }
+
+  .clamav-history-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+  }
+
+  .clamav-history-table th,
+  .clamav-history-table td {
+    padding: 0.45rem 0.55rem;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    vertical-align: top;
+  }
+
+  .clamav-history-table th {
+    color: rgba(255, 255, 255, 0.5);
+    font-weight: 600;
+  }
+
+  .tag.clamav-result-ok {
+    background: rgba(94, 234, 212, 0.12);
+    color: #5eead4;
+  }
+
+  .tag.clamav-result-warn {
+    background: rgba(251, 191, 36, 0.15);
+    color: #fbbf24;
+  }
+
+  .tag.clamav-result-bad {
+    background: rgba(248, 113, 113, 0.15);
+    color: #f87171;
+  }
+
+  .clamav-log-details {
+    margin: 0 1.15rem 1rem;
+    font-size: 0.78rem;
+  }
+
+  .clamav-log-details summary {
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.55);
+    margin-bottom: 0.35rem;
   }
 
   .system-updates-hint {

@@ -54,6 +54,26 @@
           </label>
         </div>
       </div>
+      <div class="video-download-device-row">
+        <span class="video-download-format-label" id="push-to-device-label">Push to this device</span>
+        <div class="format-segment push-device-segment"
+             role="group"
+             aria-labelledby="push-to-device-label">
+          <label class="format-segment-option">
+            <input type="radio" name="push_mode" value="off" checked />
+            <span>Off</span>
+          </label>
+          <label class="format-segment-option">
+            <input type="radio" name="push_mode" value="push" />
+            <span>To device</span>
+          </label>
+          <label class="format-segment-option">
+            <input type="radio" name="push_mode" value="push_purge" />
+            <span>To device + purge</span>
+          </label>
+        </div>
+        <span class="video-download-device-hint detail">Purge removes the RAID copy 10 min after download</span>
+      </div>
       <button type="submit" class="btn btn-primary video-download-submit" {% if not vd.yt_dlp_ok %}disabled{% endif %}>Download</button>
     </div>
   </form>
@@ -80,7 +100,11 @@
   {% if vd.jobs %}
   <ul class="storage-user-list">
     {% for job in vd.jobs %}
-    <li>
+    <li class="video-download-job-row"
+        data-job-id="{{ job.id }}"
+        {% if job.push_to_device %}data-push-device="1"{% endif %}
+        {% if job.file_url %}data-file-url="{{ job.file_url }}"{% endif %}
+        {% if job.status %}data-job-status="{{ job.status }}"{% endif %}>
       <span class="mono" title="{{ job.url }}">{{ job.url | truncate(72, True) }}</span>
       <span class="tag {% if job.format == 'audio' %}would_wait{% else %}would_hold{% endif %}">
         {% if job.format == 'audio' %}MP3{% else %}video{% endif %}
@@ -88,8 +112,19 @@
       <span class="tag {% if job.status == 'done' %}would_hold{% elif job.status == 'error' %}would_sell{% else %}would_wait{% endif %}">
         {{ job.status }}
       </span>
+      {% if job.push_to_device and job.status != 'done' %}
+      <span class="tag would_wait">→ device</span>
+      {% endif %}
+      {% if job.delete_after_push and job.status == 'done' and not job.storage_purged %}
+      <span class="tag would_wait">purge storage</span>
+      {% endif %}
       {% if job.message %}
       <span class="detail">{{ job.message }}</span>
+      {% endif %}
+      {% if job.file_url %}
+      <a class="btn btn-sm video-download-save-device"
+         href="{{ job.file_url }}"
+         download>Save to device</a>
       {% endif %}
     </li>
     {% endfor %}

@@ -37,6 +37,8 @@ bash scripts/install-dashboard-service.sh  # restart dashboard after pull
 - Log: `/mnt/storage/logs/clamav-scan.log`
 - AppArmor must allow the hook: `scripts/apparmor-transmission-daemon-local` → `/etc/apparmor.d/local/transmission-daemon` (re-run `install-storage-stack.sh` if scans never log)
 - Manual scans from the dashboard use `/usr/local/sbin/minipc-clamscan-admin` (`downloads` or `shared`); install via `install-storage-stack.sh` (sudoers in `minipc-monitor-sudoers`)
+- **Full scan schedule** on the **RAID storage** page: `minipc-clamscan-full.timer` → `minipc-clamscan-full.service` (daily time + scope via systemd drop-ins)
+- **Scan history**: `/mnt/storage/logs/clamav-scan-history.jsonl` (one JSON line per completed full scan — manual or scheduled)
 - `clamd` reads files as user `clamav` — member of `storage-apps`, and AppArmor local rule `apparmor-clamd-local` allows read under `/mnt/storage`
 - Directory scans use `find` + `clamdscan` (`clamdscan` alone does **not** recurse into folders). Large libraries take a long time; the log shows `OK: clean (N files scanned)` when done
 - Ubuntu’s default `MaxFileSize 25M` skips most video files instantly — `install-storage-stack.sh` raises this to **4096M** so torrents are actually read

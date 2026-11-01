@@ -128,6 +128,8 @@
     {% include "partials/clamav_scan_progress.html" %}
     {% endwith %}
   </div>
+  {% include "partials/clamav_schedule.html" %}
+
   <div class="system-updates-actions clamav-scan-actions">
     <form class="inline-form"
           hx-post="/actions/clamav-scan"
@@ -146,10 +148,45 @@
       <button type="submit" class="btn btn-sm" {% if clam.scan_progress.active %}disabled{% endif %}>Scan shared folder</button>
     </form>
   </div>
-  {% if clam.log_tail %}
-  <pre class="service-log-preview">{% for line in clam.log_tail %}{{ line }}
-{% endfor %}</pre>
+  <h3 class="storage-subheading">Recent full scans</h3>
+  {% if clam.scan_history %}
+  <div class="clamav-history-wrap">
+    <table class="clamav-history-table">
+      <thead>
+        <tr>
+          <th>Finished</th>
+          <th>Source</th>
+          <th>Target</th>
+          <th>Files</th>
+          <th>Infected</th>
+          <th>Result</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in clam.scan_history %}
+        <tr>
+          <td class="mono">{{ row.finished_label }}</td>
+          <td>{{ row.trigger_label }}</td>
+          <td>{{ row.scope_label }}</td>
+          <td class="mono">{{ row.scanned_files or 0 }}{% if row.total_files %} / {{ row.total_files }}{% endif %}</td>
+          <td class="mono {% if row.infected %}negative{% endif %}">{{ row.infected or 0 }}</td>
+          <td><span class="tag clamav-result-{{ row.result_tone }}">{{ row.result_label }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
   {% else %}
-  <p class="action-log-empty">No scan log entries yet ({{ clam.scan_log }}).</p>
+  <p class="action-log-empty">No completed full scans recorded yet. History is written when a manual or scheduled scan finishes.</p>
   {% endif %}
+
+  <details class="clamav-log-details">
+    <summary>Scan log tail</summary>
+    {% if clam.log_tail %}
+    <pre class="service-log-preview">{% for line in clam.log_tail %}{{ line }}
+{% endfor %}</pre>
+    {% else %}
+    <p class="action-log-empty">No log entries yet ({{ clam.scan_log }}).</p>
+    {% endif %}
+  </details>
 </section>

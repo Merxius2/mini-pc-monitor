@@ -42,6 +42,9 @@ sudo cp "$ROOT/scripts/minipc-clamscan-admin" /usr/local/sbin/
 sudo chmod 755 /usr/local/sbin/minipc-clamscan-admin
 sudo cp "$ROOT/scripts/minipc-clamscan-lib.sh" /usr/local/sbin/
 sudo chmod 644 /usr/local/sbin/minipc-clamscan-lib.sh
+sudo cp "$ROOT/scripts/minipc-clamscan-full.service" /etc/systemd/system/
+sudo cp "$ROOT/scripts/minipc-clamscan-full.timer" /etc/systemd/system/
+sudo systemctl daemon-reload
 
 sudo mkdir -p /etc/samba/smb.d
 sudo cp "$ROOT/scripts/samba-storage.conf" /etc/samba/smb.d/storage.conf

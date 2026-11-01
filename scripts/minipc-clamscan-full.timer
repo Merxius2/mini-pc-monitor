@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily full ClamAV scan (Mini-PC Monitor)
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+Persistent=true
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target

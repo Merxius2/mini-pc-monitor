@@ -1,4 +1,6 @@
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from src.config_loader import VideoDownloadConfig
@@ -8,7 +10,11 @@ from src.video_download import (
     clear_jobs_display,
     get_video_download_status,
     normalize_download_format,
+    parse_form_bool,
+    parse_push_mode,
     reset_jobs_display,
+    resolve_media_file,
+    schedule_storage_delete,
     start_download,
     validate_video_url,
 )
@@ -45,6 +51,36 @@ class VideoDownloadValidationTests(unittest.TestCase):
         self.assertEqual(normalize_download_format("video"), "video")
         self.assertEqual(normalize_download_format("mp3"), "audio")
         self.assertEqual(normalize_download_format(None), "video")
+
+    def test_parse_form_bool(self) -> None:
+        self.assertTrue(parse_form_bool("true"))
+        self.assertFalse(parse_form_bool("false"))
+
+    def test_parse_push_mode(self) -> None:
+        self.assertEqual(parse_push_mode("off"), (False, False))
+        self.assertEqual(parse_push_mode("push"), (True, False))
+        self.assertEqual(parse_push_mode("push_purge"), (True, True))
+
+    def test_job_file_url_when_done(self) -> None:
+        job = DownloadJob(
+            id="x",
+            url="https://youtu.be/a",
+            status="done",
+            output_category="video",
+            output_name="clip.mp4",
+        )
+        self.assertIn("/video-download/files/video/", job.file_url or "")
+        self.assertIn("clip.mp4", job.file_url or "")
+
+    def test_resolve_media_file_rejects_traversal(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            config = VideoDownloadConfig(
+                download_dir=tmp,
+                video_dir=tmp,
+                music_dir=str(Path(tmp) / "m"),
+            )
+            self.assertIsNone(resolve_media_file(config, "video", "../etc/passwd"))
+            self.assertIsNone(resolve_media_file(config, "other", "a.mp4"))
 
     def test_yt_dlp_command_includes_mp3_flags(self) -> None:
         config = VideoDownloadConfig(
@@ -129,6 +165,53 @@ class VideoDownloadActionsTests(unittest.TestCase):
         self.assertIsNotNone(job_id)
         self.assertIn("started", message.lower())
         thread_cls.assert_called_once()
+
+    def test_delete_after_push_only_when_push_enabled(self) -> None:
+        config = VideoDownloadConfig()
+        with patch("src.video_download.yt_dlp_available", return_value=(True, "2024.10.01")):
+            with patch("src.video_download.threading.Thread") as thread_cls:
+                thread_cls.return_value.start = lambda: None
+                start_download(
+                    "https://www.youporn.com/watch/1/test/",
+                    config,
+                    push_to_device=False,
+                    delete_after_push=True,
+                )
+        from src import video_download as vd_mod
+
+        job = next(iter(vd_mod._JOBS.values()))
+        self.assertFalse(job.delete_after_push)
+        reset_jobs_display()
+
+    def test_scheduled_delete_removes_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "song.mp3"
+            path.write_bytes(b"mp3")
+            config = VideoDownloadConfig(
+                download_dir=tmp,
+                video_dir=tmp,
+                music_dir=tmp,
+                delete_after_push_seconds=1,
+            )
+            job_id = "job1"
+            vd_mod = __import__("src.video_download", fromlist=["*"])
+            vd_mod._JOBS[job_id] = DownloadJob(
+                id=job_id,
+                url="https://youtu.be/x",
+                status="done",
+                delete_after_push=True,
+                push_to_device=True,
+                output_category="music",
+                output_name="song.mp3",
+            )
+            schedule_storage_delete(config, job_id, "music", "song.mp3", 1)
+            import time
+
+            time.sleep(1.3)
+            self.assertFalse(path.is_file())
+            job = vd_mod._JOBS[job_id]
+            self.assertTrue(job.storage_purged)
+            reset_jobs_display()
 
 
 class VideoDownloadStatusTests(unittest.TestCase):

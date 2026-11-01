@@ -21,20 +21,109 @@
 
 {% block scripts %}
 <script>
-  function videoDownloadUserEditing() {
+  (function () {
+    var PUSH_MODE_KEY = "vdPushMode";
+    var pushedIds = window.__vdPushedJobIds || (window.__vdPushedJobIds = new Set());
     var panel = document.getElementById("videoDownloadPanel");
-    if (!panel) return false;
-    var el = document.activeElement;
-    if (!el || !panel.contains(el)) return false;
-    return el.matches("input, textarea, select");
-  }
 
-  document.body.addEventListener("htmx:afterSwap", function (e) {
-    if (e.detail.target.id !== "videoDownloadPanel") return;
-    var ok = document.querySelector("#videoDownloadActionResult .action-result.ok");
-    if (!ok) return;
-    var form = document.getElementById("video-download-form");
-    if (form) form.reset();
-  });
+    function readPushMode() {
+      try {
+        var v = sessionStorage.getItem(PUSH_MODE_KEY);
+        if (v === "push" || v === "push_purge") return v;
+      } catch (e) {}
+      return "off";
+    }
+
+    function writePushMode(mode) {
+      try {
+        sessionStorage.setItem(PUSH_MODE_KEY, mode);
+      } catch (e) {}
+    }
+
+    function syncPushMode(root) {
+      var scope = root || panel || document;
+      var mode = readPushMode();
+      var radio = scope.querySelector('input[name="push_mode"][value="' + mode + '"]');
+      if (radio) radio.checked = true;
+      else {
+        var off = scope.querySelector('input[name="push_mode"][value="off"]');
+        if (off) off.checked = true;
+      }
+    }
+
+    async function deliverFileToDevice(url, fileName) {
+      var res = await fetch(url, { credentials: "same-origin" });
+      if (!res.ok) throw new Error("fetch failed");
+      var blob = await res.blob();
+      var name = fileName || "download";
+      var file = new File([blob], name, { type: blob.type || "application/octet-stream" });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: name });
+        return;
+      }
+      var objectUrl = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = name;
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () { URL.revokeObjectURL(objectUrl); }, 60000);
+    }
+
+    function tryAutoPushJobs(root) {
+      (root || panel || document).querySelectorAll(".video-download-job-row").forEach(function (row) {
+        if (row.dataset.pushDevice !== "1") return;
+        if (row.dataset.jobStatus !== "done") return;
+        var id = row.dataset.jobId;
+        var url = row.dataset.fileUrl;
+        if (!id || !url || pushedIds.has(id)) return;
+        pushedIds.add(id);
+        var name = decodeURIComponent(url.split("/").pop() || "download");
+        deliverFileToDevice(url, name).catch(function () {
+          var link = row.querySelector(".video-download-save-device");
+          if (link) link.click();
+        });
+      });
+    }
+
+    window.videoDownloadUserEditing = function () {
+      if (!panel) return false;
+      var el = document.activeElement;
+      if (!el || !panel.contains(el)) return false;
+      if (el.matches('input[name="push_mode"]')) return true;
+      return el.matches("input, textarea, select");
+    };
+
+    window.initVideoDownloadPanel = function (root) {
+      syncPushMode(root);
+      tryAutoPushJobs(root);
+    };
+
+    if (panel && panel.dataset.pushPanelBound !== "1") {
+      panel.dataset.pushPanelBound = "1";
+      panel.addEventListener("change", function (e) {
+        if (!e.target.matches('input[name="push_mode"]')) return;
+        writePushMode(e.target.value || "off");
+      });
+    }
+
+    initVideoDownloadPanel(panel);
+
+    document.body.addEventListener("htmx:afterSwap", function (e) {
+      if (e.detail.target.id === "videoDownloadPanel") {
+        initVideoDownloadPanel(e.detail.target);
+      }
+      if (e.detail.target.id !== "videoDownloadPanel") return;
+      var ok = document.querySelector("#videoDownloadActionResult .action-result.ok");
+      if (!ok) return;
+      var form = document.getElementById("video-download-form");
+      if (form) {
+        form.reset();
+        syncPushMode(e.detail.target);
+      }
+    });
+  })();
 </script>
 {% endblock %}

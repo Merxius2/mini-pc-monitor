@@ -103,6 +103,65 @@ data.update(
 )
 path.write_text(json.dumps(data) + "\n", encoding="utf-8")
 PY
+  minipc_clam_append_history "$progress_file" "$state" "$message" "$scanned" "$infected" "$errors" "$total"
+}
+
+minipc_clam_append_history() {
+  local progress_file="$1"
+  local state="$2"
+  local message="$3"
+  local scanned="$4"
+  local infected="$5"
+  local errors="$6"
+  local total="$7"
+  local history_file="${MINIPC_CLAM_HISTORY:-/mnt/storage/logs/clamav-scan-history.jsonl}"
+  local trigger="${MINIPC_CLAM_TRIGGER:-manual}"
+  PROGRESS_PATH="$progress_file" HISTORY_PATH="$history_file" TRIGGER="$trigger" \
+    STATE="$state" MESSAGE="$message" \
+    SCANNED="$scanned" INFECTED="$infected" ERRORS="$errors" TOTAL="$total" \
+    python3 <<'PY'
+import json
+import os
+from datetime import datetime, timezone
+from pathlib import Path
+
+progress_path = Path(os.environ["PROGRESS_PATH"])
+history_path = Path(os.environ["HISTORY_PATH"])
+trigger = os.environ.get("TRIGGER") or "manual"
+state = os.environ["STATE"]
+message = os.environ["MESSAGE"]
+scanned = int(os.environ["SCANNED"])
+infected = int(os.environ["INFECTED"])
+errors = int(os.environ["ERRORS"])
+total = int(os.environ["TOTAL"])
+started_at = None
+scope = ""
+target = ""
+if progress_path.is_file():
+    try:
+        data = json.loads(progress_path.read_text(encoding="utf-8"))
+        started_at = data.get("started_at")
+        scope = data.get("scope") or ""
+        target = data.get("target") or ""
+    except (json.JSONDecodeError, OSError):
+        pass
+entry = {
+    "finished_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+    "started_at": started_at,
+    "scope": scope,
+    "target": target,
+    "state": state,
+    "message": message,
+    "scanned_files": scanned,
+    "infected": infected,
+    "errors": errors,
+    "total_files": total,
+    "trigger": trigger,
+}
+history_path.parent.mkdir(parents=True, exist_ok=True)
+with history_path.open("a", encoding="utf-8") as fh:
+    fh.write(json.dumps(entry) + "\n")
+PY
 }
 
 minipc_clamdscan_flush_batch() {

@@ -181,6 +181,7 @@ class VideoDownloadConfig:
     )
     yt_dlp_command: str = ""
     download_timeout_seconds: int = 3600
+    delete_after_push_seconds: int = 600
 
     def __post_init__(self) -> None:
         if not (self.video_dir or "").strip():
@@ -194,13 +195,25 @@ class VideoDownloadConfig:
 
 
 @dataclass
+class ClamAvScheduleConfig:
+    manage: bool = True
+    time: str = "03:30"
+    scope: str = "shared"
+    timer_unit: str = "minipc-clamscan-full.timer"
+    service_unit: str = "minipc-clamscan-full.service"
+
+
+@dataclass
 class ClamAvConfig:
     enabled: bool = True
     daemon_unit: str = "clamav-daemon.service"
     freshclam_unit: str = "clamav-freshclam.service"
     scan_log: str = "/mnt/storage/logs/clamav-scan.log"
     scan_progress_file: str = "/mnt/storage/logs/clamav-scan.progress.json"
+    scan_history_file: str = "/mnt/storage/logs/clamav-scan-history.jsonl"
+    max_history_shown: int = 15
     helper_script: str = "/usr/local/sbin/minipc-clamscan-admin"
+    schedule: ClamAvScheduleConfig = field(default_factory=ClamAvScheduleConfig)
 
 
 @dataclass
@@ -245,7 +258,12 @@ def load_settings(path: Path | None = None) -> Settings:
     storage = StorageConfig(**data.get("storage", {}))
     samba = SambaConfig(**data.get("samba", {}))
     transmission = TransmissionConfig(**data.get("transmission", {}))
-    clamav = ClamAvConfig(**data.get("clamav", {}))
+    clam_raw = data.get("clamav", {}) or {}
+    schedule_raw = clam_raw.get("schedule") or {}
+    clamav = ClamAvConfig(
+        **{k: v for k, v in clam_raw.items() if k != "schedule"},
+        schedule=ClamAvScheduleConfig(**schedule_raw),
+    )
     system_updates = SystemUpdatesConfig(**data.get("system_updates", {}))
     video_download = VideoDownloadConfig(**data.get("video_download", {}))
     process_labels = [ProcessLabelRule(**r) for r in data.get("process_labels", [])]

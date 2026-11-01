@@ -6,10 +6,11 @@ from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 
 from src.azerothcore import get_azerothcore_status
 from src.clamav import get_clamav_scan_progress, get_clamav_status, start_clamav_scan
+from src.clamav_schedule import apply_clamav_schedule, set_clamav_schedule_enabled
 from src.domoticz import get_domoticz_status
 from src.homeassistant import get_homeassistant_status
 from src.qr import qr_png_bytes
@@ -37,6 +38,9 @@ from src.system_updates import (
 from src.video_download import (
     clear_jobs_display,
     get_video_download_status,
+    parse_form_bool,
+    parse_push_mode,
+    resolve_media_file,
     start_download,
 )
 
@@ -255,15 +259,44 @@ def _video_download_action_response(request: Request, ok: bool, message: str):
     return RedirectResponse("/video-download", status_code=303)
 
 
+@router.get("/video-download/files/{category}/{file_name}")
+def video_download_file(request: Request, category: str, file_name: str):
+    settings = _settings(request)
+    _require_video_download(settings)
+    target = resolve_media_file(settings.video_download, category, file_name)
+    if not target:
+        raise HTTPException(status_code=404, detail="File not found")
+    media_type = None
+    lower = file_name.lower()
+    if lower.endswith(".mp4"):
+        media_type = "video/mp4"
+    elif lower.endswith(".mp3"):
+        media_type = "audio/mpeg"
+    return FileResponse(
+        target,
+        filename=target.name,
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{target.name}"'},
+    )
+
+
 @router.post("/actions/video-download")
 def action_video_download(
     request: Request,
     url: str = Form(...),
     format: str = Form("video"),
+    push_mode: str = Form("off"),
 ):
     settings = _settings(request)
     _require_video_download(settings)
-    ok, message, _job_id = start_download(url, settings.video_download, format)
+    push, delete_after = parse_push_mode(push_mode)
+    ok, message, _job_id = start_download(
+        url,
+        settings.video_download,
+        format,
+        push_to_device=push,
+        delete_after_push=delete_after,
+    )
     return _video_download_action_response(request, ok, message)
 
 
@@ -681,6 +714,35 @@ def clamav_scan_progress_partial(request: Request):
         {"progress": progress},
         headers=headers,
     )
+
+
+@router.post("/actions/update-clamav-schedule")
+def action_update_clamav_schedule(
+    request: Request,
+    scan_time: str = Form(...),
+    scope: str = Form(...),
+):
+    settings = _settings(request)
+    if not settings.clamav.enabled:
+        raise HTTPException(status_code=404, detail="ClamAV disabled")
+    ok, message = apply_clamav_schedule(
+        settings.clamav,
+        time_str=scan_time,
+        scope=scope,
+    )
+    return _storage_action_response(request, ok, message)
+
+
+@router.post("/actions/toggle-clamav-schedule")
+def action_toggle_clamav_schedule(request: Request, enabled: str = Form(...)):
+    settings = _settings(request)
+    if not settings.clamav.enabled:
+        raise HTTPException(status_code=404, detail="ClamAV disabled")
+    ok, message = set_clamav_schedule_enabled(
+        settings.clamav,
+        enabled=enabled == "true",
+    )
+    return _storage_action_response(request, ok, message)
 
 
 @router.post("/actions/clamav-scan")
