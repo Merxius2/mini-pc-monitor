@@ -164,6 +164,9 @@ class SystemUpdatesConfig:
 @dataclass
 class VideoDownloadConfig:
     enabled: bool = True
+    host: str = "0.0.0.0"
+    port: int = 8083
+    public_url: str = "http://192.168.1.30:8083/"
     download_dir: str = "/mnt/storage/shared/Downloads/videos"
     allowed_hosts: list[str] = field(
         default_factory=lambda: ["youporn.com", "www.youporn.com"]

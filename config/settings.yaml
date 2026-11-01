@@ -140,6 +140,9 @@ system_updates:
 
 video_download:
   enabled: true
+  host: 0.0.0.0
+  port: 8083
+  public_url: http://192.168.1.30:8083/
   download_dir: /mnt/storage/shared/Downloads/videos
   allowed_hosts:
     - youporn.com

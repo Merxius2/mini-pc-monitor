@@ -1597,6 +1597,28 @@
   .storage-form input[type="text"],
   .storage-form input[type="password"],
   .storage-form input[type="url"],
+  .standalone-tool {
+    max-width: 52rem;
+    margin: 0 auto;
+    padding: 2rem 1.75rem 3rem;
+  }
+
+  .standalone-tool-header {
+    margin-bottom: 1.5rem;
+  }
+
+  .standalone-tool-header h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.5rem;
+  }
+
+  .standalone-tool-header p {
+    color: var(--muted);
+    font-size: 0.95rem;
+  }
+
   .storage-form input[type="file"] {
     font: inherit;
     padding: 0.45rem 0.55rem;
@@ -1780,6 +1802,14 @@
   }
 
   #storageActionResult .action-result {
+    margin: 0 0 1rem;
+    padding: 0.65rem 1.15rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+  }
+
+  #videoDownloadActionResult .action-result {
     margin: 0 0 1rem;
     padding: 0.65rem 1.15rem;
     border: 1px solid var(--border);

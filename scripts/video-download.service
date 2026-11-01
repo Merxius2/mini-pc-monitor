@@ -1,0 +1,18 @@
+[Unit]
+Description=YouPorn video download tool (standalone web UI)
+After=network.target
+Documentation=https://github.com/Merxius2/mini-pc-monitor/blob/main/docs/video-download.md
+
+[Service]
+Type=simple
+User=sylvester
+Group=sylvester
+WorkingDirectory=/home/sylvester/mini-pc-monitor
+ExecStart=/home/sylvester/mini-pc-monitor/scripts/serve-video-download.sh
+Restart=on-failure
+RestartSec=5
+Environment=VIDEO_DOWNLOAD_HOST=0.0.0.0
+Environment=VIDEO_DOWNLOAD_PORT=8083
+
+[Install]
+WantedBy=multi-user.target
