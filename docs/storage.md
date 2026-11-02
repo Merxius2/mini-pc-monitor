@@ -5,7 +5,11 @@ Dashboard pages:
 - **RAID storage** (`/storage`) — [http://192.168.1.30:8080/storage](http://192.168.1.30:8080/storage)
 - **Torrents** (`/torrents`) — [http://192.168.1.30:8080/torrents](http://192.168.1.30:8080/torrents)
 
-If the **dashboard** shows a storage alert (read-only or degraded RAID), fix the array before using torrents or Samba. Boot uses `minipc-ensure-storage.sh`, which re-assembles `md0` by UUID from `/etc/mdadm/mdadm.conf` if the mirror was left in a **broken** state after disk reorder.
+If the **dashboard** shows a storage alert (read-only or degraded RAID), fix the array before using torrents or Samba.
+
+**Disk names (`sda` / `sdb` swapping):** Linux may assign different `/dev/sdX` letters after each wake. The mini-PC stack ignores those for RAID and always assembles `md0` from **`/dev/disk/by-id/…`** (drive serial / WWN). `minipc-ensure-storage.sh` runs at boot and after suspend; it refreshes the `devices=` line in `/etc/mdadm/mdadm.conf`. Install once with `install-storage-raid.sh` (updates initramfs). To refresh manually: `sudo minipc-mdadm-sync-conf.sh` then `sudo update-initramfs -u`.
+
+The filesystem mount stays on **`/mnt/storage`** via **UUID** in `/etc/fstab` (not `/dev/sdX`).
 
 ## One-time install (mini-PC)
 

@@ -9,8 +9,13 @@ if [ ! -f /etc/mdadm/mdadm.conf ] || ! grep -q '/dev/md0' /etc/mdadm/mdadm.conf;
   exit 1
 fi
 
+sudo cp "$ROOT/scripts/minipc-mdadm-lib.sh" /usr/local/sbin/
+sudo chmod 644 /usr/local/sbin/minipc-mdadm-lib.sh
 sudo cp "$ROOT/scripts/minipc-ensure-storage.sh" /usr/local/sbin/
 sudo chmod 755 /usr/local/sbin/minipc-ensure-storage.sh
+sudo cp "$ROOT/scripts/minipc-mdadm-sync-conf.sh" /usr/local/sbin/
+sudo chmod 755 /usr/local/sbin/minipc-mdadm-sync-conf.sh
+sudo /usr/local/sbin/minipc-mdadm-sync-conf.sh || true
 
 sudo cp "$ROOT/scripts/minipc-storage.service" /etc/systemd/system/minipc-storage.service
 sudo cp "$ROOT/scripts/minipc-storage-sleep" /usr/lib/systemd/system-sleep/minipc-storage
