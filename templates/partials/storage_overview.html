@@ -1,13 +1,30 @@
 {% set clam = clamav %}
 
-{% if raid.has_alerts %}
+{% if raid.has_alerts or raid.repair %}
 <div class="storage-alert-stack storage-alert-stack-page">
+  {% if raid.repair and raid.repair.attempted %}
+  <div class="storage-alert storage-alert-{{ 'warn' if not raid.repair.ok else 'amber' }}">
+    <strong>{% if raid.repair.ok %}RAID auto-repair ran{% else %}RAID auto-repair failed{% endif %}</strong>
+    <p>{{ raid.repair.message }}{% if raid.repair.get('healthy_after') %} · Mirror is healthy again.{% endif %}</p>
+  </div>
+  {% elif raid.repair and raid.repair.skipped_cooldown %}
+  <p class="detail storage-repair-hint">{{ raid.repair.message }}</p>
+  {% endif %}
   {% for alert in raid.alerts %}
   <div class="storage-alert storage-alert-{{ alert.level }}">
     <strong>{{ alert.title }}</strong>
     <p>{{ alert.detail }}</p>
   </div>
   {% endfor %}
+  {% if raid.has_alerts %}
+  <form class="inline-form storage-repair-form"
+        hx-post="/actions/raid-repair"
+        hx-target="#storageActionResult"
+        hx-swap="innerHTML"
+        hx-confirm="Stop Samba/torrents briefly, re-assemble md0 by disk ID, and remount /mnt/storage?">
+    <button type="submit" class="btn btn-sm">Repair RAID now</button>
+  </form>
+  {% endif %}
 </div>
 {% endif %}
 

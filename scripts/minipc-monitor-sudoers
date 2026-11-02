@@ -1,4 +1,6 @@
 # Mini-PC Monitor — storage stack (script validates subcommands)
+sylvester ALL=(ALL) NOPASSWD: /usr/local/sbin/minipc-ensure-storage.sh
+sylvester ALL=(ALL) NOPASSWD: /usr/local/sbin/minipc-mdadm-sync-conf.sh
 sylvester ALL=(ALL) NOPASSWD: /usr/local/sbin/minipc-samba-admin
 sylvester ALL=(ALL) NOPASSWD: /bin/systemctl start smbd.service, /bin/systemctl stop smbd.service, /bin/systemctl restart smbd.service
 sylvester ALL=(ALL) NOPASSWD: /bin/systemctl start transmission-daemon.service, /bin/systemctl stop transmission-daemon.service, /bin/systemctl restart transmission-daemon.service

@@ -1763,6 +1763,14 @@
     color: var(--amber);
   }
 
+  .storage-repair-form {
+    margin-top: 0.35rem;
+  }
+
+  .storage-repair-hint {
+    margin: 0 0 0.35rem;
+  }
+
   .storage-alert-link {
     display: inline-block;
     margin-top: 0.45rem;

@@ -130,6 +130,11 @@ class StorageConfig:
     mount: str = "/mnt/storage"
     md_device: str = "/dev/md0"
     array_uuid: str = "df02ddd3:9732589a:79125c92:7f363879"
+    ensure_script: str = "/usr/local/sbin/minipc-ensure-storage.sh"
+    auto_repair: bool = True
+    repair_cooldown_seconds: int = 300
+    repair_cooldown_file: str = "/var/lib/mini-pc-monitor/last-raid-repair.ts"
+    repair_timeout_seconds: int = 180
 
 
 @dataclass

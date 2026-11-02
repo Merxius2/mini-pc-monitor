@@ -22,7 +22,7 @@ from src.samba import (
     set_samba_user_password,
     smb_connect_url,
 )
-from src.storage import get_raid_status
+from src.storage_repair import get_raid_status_with_repair
 from src.transmission import get_transmission_status, transmission_client
 from src.config_loader import load_settings, loggable_service_units, manageable_service_units
 from src.service_logs import get_service_logs
@@ -153,10 +153,7 @@ def sleep_schedule_partial(request: Request):
 
 def _storage_context(settings) -> dict:
     return {
-        "raid": get_raid_status(
-            md_device=settings.storage.md_device,
-            mount=settings.storage.mount,
-        ),
+        "raid": get_raid_status_with_repair(settings.storage),
         "samba": get_samba_status(settings.samba),
         "clamav": get_clamav_status(settings.clamav),
     }
@@ -320,15 +317,25 @@ def storage_alert_partial(request: Request):
     settings = _settings(request)
     if not settings.storage.enabled:
         return HTMLResponse("")
-    raid = get_raid_status(
-        md_device=settings.storage.md_device,
-        mount=settings.storage.mount,
-    )
+    raid = get_raid_status_with_repair(settings.storage)
     return _templates(request).TemplateResponse(
         request,
         "partials/storage_alert.html",
         {"raid": raid},
     )
+
+
+@router.post("/actions/raid-repair")
+def action_raid_repair(request: Request):
+    settings = _settings(request)
+    if not settings.storage.enabled:
+        raise HTTPException(status_code=404, detail="Storage disabled")
+    raid = get_raid_status_with_repair(settings.storage, force_repair=True)
+    ok = bool(raid.get("repair", {}).get("ok"))
+    message = raid.get("repair", {}).get("message") or (
+        "RAID looks healthy" if not raid.get("degraded") else "Repair finished — check RAID status"
+    )
+    return _storage_action_response(request, ok, message)
 
 
 @router.get("/storage/samba-qr.png")

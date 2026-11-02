@@ -11,6 +11,8 @@ If the **dashboard** shows a storage alert (read-only or degraded RAID), fix the
 
 The filesystem mount stays on **`/mnt/storage`** via **UUID** in `/etc/fstab` (not `/dev/sdX`).
 
+**Auto-repair:** While the dashboard is running, it checks RAID health every **30s** on the home page and every **10s** on **RAID storage**. If the mirror is degraded, read-only, or unmounted, it runs `minipc-ensure-storage.sh` (at most once every **5 minutes** unless you click **Repair RAID now**). Requires `scripts/minipc-monitor-sudoers` on the mini-PC.
+
 ## One-time install (mini-PC)
 
 ```bash
