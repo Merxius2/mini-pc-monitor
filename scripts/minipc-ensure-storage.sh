@@ -98,6 +98,13 @@ storage_mounted_readonly() {
   findmnt -no OPTIONS "$MOUNT" 2>/dev/null | grep -qE '(^|,)(ro|emergency_ro)(,|$)'
 }
 
+minipc_storage_stack_start() {
+  if ! mountpoint -q "$MOUNT" || storage_mounted_readonly; then
+    return 0
+  fi
+  systemctl start smbd nmbd transmission-daemon 2>/dev/null || true
+}
+
 assemble_md0
 
 if [ -b "$MD_DEV" ]; then
@@ -123,6 +130,7 @@ if mountpoint -q "$MOUNT"; then
   if storage_mounted_readonly; then
     mount -o remount,rw "$MOUNT" 2>/dev/null || true
   fi
+  minipc_storage_stack_start
   exit 0
 fi
 
@@ -131,3 +139,5 @@ if grep -q "$FSTAB_UUID" /etc/fstab 2>/dev/null; then
 else
   mount -U "$FSTAB_UUID" "$MOUNT" 2>/dev/null || mount "$MD_DEV" "$MOUNT"
 fi
+
+minipc_storage_stack_start
