@@ -6,9 +6,37 @@ from pathlib import Path
 from src.config_loader import MarstekConfig
 from src.marstek import (
     MarstekStore,
+    _build_display,
     _device_from_message,
+    normalize_ip,
     update_ct_alerts,
 )
+
+
+class NormalizeIpTests(unittest.TestCase):
+    def test_strips_zero_padded_octets(self) -> None:
+        self.assertEqual(normalize_ip("192.168.01.27"), "192.168.1.27")
+
+
+class BuildDisplayTests(unittest.TestCase):
+    def test_merges_es_get_mode_when_es_status_missing(self) -> None:
+        display = _build_display(
+            {
+                "ES.GetMode": {
+                    "mode": "Auto",
+                    "bat_soc": 91,
+                    "ongrid_power": -300,
+                    "ct_state": 1,
+                    "total_power": -12,
+                },
+                "Bat.GetStatus": {"soc": 91, "bat_capacity": 4600, "rated_capacity": 5120},
+            },
+            {},
+        )
+        self.assertEqual(display["soc"], 91)
+        self.assertEqual(display["mode"], "Auto")
+        self.assertEqual(display["ongrid_power"], -300)
+        self.assertEqual(display["ct_state"], 1)
 
 
 class DeviceFromMessageTests(unittest.TestCase):

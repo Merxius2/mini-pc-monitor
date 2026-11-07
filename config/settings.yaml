@@ -182,6 +182,8 @@ marstek:
   enabled: true
   udp_port: 30000
   bind_port: 30000
+  request_delay: 3.8
+  request_timeout: 5.0
   broadcast_hosts:
     - 192.168.1.255
     - 255.255.255.255

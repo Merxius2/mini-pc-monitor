@@ -36,7 +36,21 @@
     </div>
     <div>
       <dt>Grid</dt>
-      <dd>{% if d.ongrid_power is not none %}{{ d.ongrid_power }} W{% else %}—{% endif %}</dd>
+      <dd>{% if d.ongrid_power is not none %}{{ d.ongrid_power }} W{% if d.ongrid_power < 0 %} <span class="detail">(export)</span>{% elif d.ongrid_power > 0 %} <span class="detail">(import)</span>{% endif %}{% else %}—{% endif %}</dd>
+    </div>
+    <div>
+      <dt>CT total</dt>
+      <dd>{% if d.total_power is not none %}{{ d.total_power }} W{% else %}—{% endif %}</dd>
+    </div>
+    <div>
+      <dt>Phases A/B/C</dt>
+      <dd class="mono">
+        {% if d.a_power is not none or d.b_power is not none or d.c_power is not none %}
+        {{ d.a_power if d.a_power is not none else "—" }} /
+        {{ d.b_power if d.b_power is not none else "—" }} /
+        {{ d.c_power if d.c_power is not none else "—" }} W
+        {% else %}—{% endif %}
+      </dd>
     </div>
     <div>
       <dt>Capacity</dt>
@@ -54,6 +68,10 @@
       <dd class="{% if d.ct_connected %}marstek-ct-ok{% elif d.ct_state == 0 %}marstek-ct-bad{% endif %}">
         {% if d.ct_state == 1 %}Connected{% elif d.ct_state == 0 %}Lost{% else %}—{% endif %}
       </dd>
+    </div>
+    <div>
+      <dt>Firmware</dt>
+      <dd>{% if d.firmware is not none %}{{ d.firmware }}{% elif dev.ver is not none %}{{ dev.ver }}{% else %}—{% endif %}</dd>
     </div>
     <div>
       <dt>Wi‑Fi</dt>

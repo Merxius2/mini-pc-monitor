@@ -13,6 +13,14 @@ Dashboard page: **http://192.168.1.30:8080/batteries**
 - **Scan LAN** broadcasts `Marstek.GetDevice` to the hosts in `marstek.broadcast_hosts` (`config/settings.yaml`).
 - **Add by IP** queries a single host if broadcast is blocked on your network.
 
+## Polling (Wi‑Fi)
+
+Marstek devices on Wi‑Fi rate-limit back-to-back UDP queries (~3.7 s). The dashboard spaces requests (`request_delay: 3.8`) and only accepts replies from the target IP (needed when several batteries share port 30000). A background poller refreshes selected units so page loads stay fast.
+
+On some Venus E firmware (e.g. 148), `ES.GetStatus` may time out; power and SOC are taken from `ES.GetMode`, `EM.GetStatus`, and `Bat.GetStatus` instead.
+
+Device IPs reported as `192.168.01.27` are normalised to `192.168.1.27`.
+
 Selected devices are stored in `/var/lib/mini-pc-monitor/marstek.json`.
 
 ## CT clamp notifications

@@ -232,8 +232,12 @@ class MarstekConfig:
     udp_port: int = 30000
     bind_host: str = "0.0.0.0"
     bind_port: int = 30000
-    request_timeout: float = 2.5
-    discover_timeout: float = 3.5
+    request_timeout: float = 5.0
+    request_delay: float = 3.8
+    request_delay_fast: float = 0.2
+    wifi_rtt_threshold_ms: float = 150.0
+    poll_pause_seconds: float = 3.0
+    discover_timeout: float = 4.0
     ct_alert_after_seconds: int = 300
     data_file: str = "/var/lib/mini-pc-monitor/marstek.json"
     broadcast_hosts: list[str] = field(default_factory=lambda: ["192.168.1.255"])
