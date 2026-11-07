@@ -48,6 +48,7 @@ from src.system_updates import (
     apply_full_system_updates,
     apply_system_updates,
     get_system_updates_status,
+    reboot_system,
     refresh_system_updates,
 )
 from src.video_download import (
@@ -787,6 +788,15 @@ def action_system_updates_full_apply(request: Request):
     if not settings.system_updates.enabled:
         raise HTTPException(status_code=404, detail="System updates disabled")
     ok, message, _ = apply_full_system_updates(settings.system_updates)
+    return _management_updates_action_response(request, ok, message)
+
+
+@router.post("/actions/system-updates-reboot")
+def action_system_updates_reboot(request: Request):
+    settings = _settings(request)
+    if not settings.system_updates.enabled:
+        raise HTTPException(status_code=404, detail="System updates disabled")
+    ok, message, _ = reboot_system(settings.system_updates)
     return _management_updates_action_response(request, ok, message)
 
 

@@ -140,8 +140,13 @@ case "${1:-}" in
   full-upgrade)
     run_apt_apply_json full-upgrade
     ;;
+  reboot)
+    # Delay so the dashboard can return before the host restarts.
+    nohup bash -c 'sleep 4; /bin/systemctl reboot' >/dev/null 2>&1 &
+    python3 -c 'import json; print(json.dumps({"ok": True, "reboot_scheduled": True}))'
+    ;;
   *)
-    echo "Usage: $0 status|refresh|upgrade|full-upgrade" >&2
+    echo "Usage: $0 status|refresh|upgrade|full-upgrade|reboot" >&2
     exit 1
     ;;
 esac

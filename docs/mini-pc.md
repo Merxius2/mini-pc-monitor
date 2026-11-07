@@ -34,6 +34,8 @@ System updates on **Mini-PC management** use `/usr/local/sbin/minipc-system-upda
 bash scripts/install-system-updates.sh
 ```
 
+Re-run that script after pulling if the helper gains new actions (e.g. **Reboot now** on management when `reboot-required` is set).
+
 ## Commands
 
 ```bash

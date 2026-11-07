@@ -128,3 +128,12 @@ def apply_system_updates(config: SystemUpdatesConfig) -> tuple[bool, str, dict[s
 
 def apply_full_system_updates(config: SystemUpdatesConfig) -> tuple[bool, str, dict[str, Any]]:
     return _apply_apt(config, "full-upgrade")
+
+
+def reboot_system(config: SystemUpdatesConfig) -> tuple[bool, str, dict[str, Any]]:
+    data, err = _invoke(config, "reboot")
+    if err:
+        return False, err, {}
+    if not data.get("reboot_scheduled") and data.get("ok") is not True:
+        return False, "Reboot was not scheduled", data
+    return True, "Rebooting in a few seconds. This page will disconnect.", data

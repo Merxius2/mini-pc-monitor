@@ -3,7 +3,12 @@ import unittest
 from unittest.mock import patch
 
 from src.config_loader import SystemUpdatesConfig
-from src.system_updates import _format_upgrade_message, _parse_helper_json, get_system_updates_status
+from src.system_updates import (
+    _format_upgrade_message,
+    _parse_helper_json,
+    get_system_updates_status,
+    reboot_system,
+)
 
 
 class ParseHelperJsonTests(unittest.TestCase):
@@ -61,6 +66,27 @@ class SystemUpdatesStatusTests(unittest.TestCase):
         self.assertTrue(status["reboot_required"])
         self.assertEqual(status["overall"], "amber")
         self.assertEqual(status["packages"][0]["name"], "curl")
+
+
+class RebootActionTests(unittest.TestCase):
+    def test_schedules_reboot_via_helper(self) -> None:
+        config = SystemUpdatesConfig()
+        seen: list[list[str]] = []
+
+        def fake_run(cmd: list[str]):
+            seen.append(cmd)
+            class Result:
+                returncode = 0
+                stdout = json.dumps({"ok": True, "reboot_scheduled": True})
+                stderr = ""
+
+            return Result()
+
+        with patch("src.system_updates._run", fake_run):
+            ok, msg, _ = reboot_system(config)
+        self.assertTrue(ok)
+        self.assertIn("Rebooting", msg)
+        self.assertIn("reboot", seen[0])
 
 
 if __name__ == "__main__":

@@ -32,6 +32,16 @@
         hx-indicator="#systemUpdatesSpinner">
     <button type="submit" class="btn btn-sm">Check for updates</button>
   </form>
+  {% if updates.reboot_required %}
+  <form class="inline-form"
+        hx-post="/actions/system-updates-reboot"
+        hx-target="#managementUpdatesActionResult"
+        hx-swap="innerHTML"
+        hx-indicator="#systemUpdatesSpinner"
+        hx-confirm="Reboot the mini-PC now? Services (Home Assistant, Transmission, WoW, etc.) will restart.">
+    <button type="submit" class="btn btn-sm btn-danger">Reboot now</button>
+  </form>
+  {% endif %}
   {% if updates.count > 0 %}
   <form class="inline-form"
         hx-post="/actions/system-updates-apply"
