@@ -11,7 +11,7 @@
       {% if m.polling_enabled %}
       The mini-PC is polling selected batteries over UDP. Turn off to stop all automatic API traffic (e.g. if units reset).
       {% else %}
-      Monitoring is <strong>off</strong> — no background UDP. Turn on to resume live stats. One-off <strong>Scan LAN</strong> still works.
+      Monitoring is <strong>off</strong> — no background UDP. Turn on to configure devices and see live stats.
       {% endif %}
     </p>
     <form hx-post="/actions/marstek-toggle-polling"
@@ -24,6 +24,8 @@
     </form>
   </div>
 </section>
+
+{% if m.polling_enabled %}
 
 {% if m.has_ct_alerts %}
 <div class="marstek-alert-banner" id="marstekCtAlertBanner"
@@ -128,3 +130,5 @@
   </div>
   {% endif %}
 </section>
+
+{% endif %}

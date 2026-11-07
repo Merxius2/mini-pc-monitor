@@ -7,15 +7,11 @@
   </div>
 </div>
 
-{% if marstek_enabled %}
+{% if marstek_enabled and marstek_polling_enabled %}
 <div id="marstekSummaryPanel"
      hx-get="/partials/marstek-summary"
      hx-trigger="load, every {{ marstek_refresh_seconds }}s"
-     hx-swap="innerHTML">
-  <section class="panel marstek-home-summary">
-    <div class="panel-header">Batteries <span class="detail">Loading…</span></div>
-  </section>
-</div>
+     hx-swap="innerHTML"></div>
 {% endif %}
 
 <div id="storageAlertPanel"

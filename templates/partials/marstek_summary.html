@@ -1,14 +1,4 @@
 {% set s = marstek_summary %}
-{% if s.paused %}
-<section class="panel marstek-home-summary marstek-home-paused">
-  <div class="panel-header">
-    Batteries
-    <span class="tag would_wait">Monitoring off</span>
-    <a href="/batteries" class="hint">Settings →</a>
-  </div>
-  <p class="detail" style="padding: 0 1.15rem 1rem;">UDP polling is paused. Open Batteries to turn monitoring back on.</p>
-</section>
-{% else %}
 <section class="panel marstek-home-summary">
   <div class="panel-header">
     Batteries
@@ -35,4 +25,3 @@
     {% endfor %}
   </div>
 </section>
-{% endif %}

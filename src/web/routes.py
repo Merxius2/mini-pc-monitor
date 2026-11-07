@@ -125,11 +125,15 @@ def _status_context(settings) -> dict:
 def dashboard_home(request: Request):
     settings = _settings(request)
     marstek_refresh = max(5, int(settings.marstek.ui_refresh_seconds)) if settings.marstek.enabled else 10
+    marstek_polling = (
+        settings.marstek.enabled and get_store(settings.marstek).polling_enabled()
+    )
     ctx = {
         "page_title": "Dashboard",
         "active_nav": "dashboard",
         "status": _status_context(settings),
         "marstek_enabled": bool(settings.marstek.enabled),
+        "marstek_polling_enabled": marstek_polling,
         "marstek_refresh_seconds": marstek_refresh,
         **_nav_context(settings),
     }
@@ -215,13 +219,7 @@ def marstek_summary_partial(request: Request):
     if not settings.marstek.enabled:
         return HTMLResponse("")
     summary = get_marstek_summary(settings.marstek)
-    if summary.get("paused"):
-        return _templates(request).TemplateResponse(
-            request,
-            "partials/marstek_summary.html",
-            {"marstek_summary": summary, "marstek_refresh_seconds": refresh},
-        )
-    if not summary.get("devices"):
+    if summary.get("paused") or not summary.get("devices"):
         return HTMLResponse("")
     refresh = max(5, int(settings.marstek.ui_refresh_seconds))
     return _templates(request).TemplateResponse(
