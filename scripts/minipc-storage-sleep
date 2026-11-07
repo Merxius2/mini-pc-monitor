@@ -7,6 +7,6 @@ case "$1" in
     sync
     ;;
   post)
-    /usr/local/sbin/minipc-ensure-storage.sh
+    MINIPC_MEMBER_WAIT_MAX=45 /usr/local/sbin/minipc-ensure-storage.sh
     ;;
 esac

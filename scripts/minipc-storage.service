@@ -1,12 +1,13 @@
 [Unit]
 Description=Assemble MD RAID and mount /mnt/storage
-After=multi-user.target systemd-udev-settle.service
-Wants=systemd-udev-settle.service
+After=multi-user.target
+# Weak ordering only — must not block local-fs / emergency boot paths.
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
 TimeoutStartSec=90
+Environment=MINIPC_MEMBER_WAIT_MAX=12
 ExecStart=/usr/local/sbin/minipc-ensure-storage.sh
 
 [Install]

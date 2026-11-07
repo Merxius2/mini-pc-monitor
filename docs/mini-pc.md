@@ -38,6 +38,8 @@ Re-run that script after pulling if the helper gains new actions (e.g. **Reboot 
 
 Service start/stop from the **Services** page is saved to `/var/lib/mini-pc-monitor/service-desired-state.json` and restored after reboot (`bash scripts/install-service-state.sh` once). **Reboot now** snapshots all manageable units before reboot.
 
+Boot layout, RAID ordering, UEFI notes, and diagnostics: [boot.md](boot.md).
+
 ## Commands
 
 ```bash

@@ -37,7 +37,8 @@ wait_for_members() {
   local uuid="$1"
   local want="${2:-2}"
   local attempt found_count
-  for attempt in $(seq 1 45); do
+  local max_wait="${MINIPC_MEMBER_WAIT_MAX:-45}"
+  for attempt in $(seq 1 "$max_wait"); do
     udevadm settle 2>/dev/null || true
     mapfile -t _found < <(minipc_md_member_by_id "$uuid")
     found_count="${#_found[@]}"
