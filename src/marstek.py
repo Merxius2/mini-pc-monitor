@@ -760,21 +760,18 @@ def get_marstek_dashboard(config: MarstekConfig) -> dict[str, Any]:
         if cached is not None:
             statuses.append(cached)
             continue
-        if not _STATUS_CACHE:
-            statuses.append(poll_marstek_device(cfg, ip))
-        else:
-            statuses.append(
-                {
-                    "ip": ip,
-                    "online": False,
-                    "polled_at": _utc_now_iso(),
-                    "methods": {},
-                    "display": empty_display(),
-                    "error": "waiting for background poll",
-                    "src": row.get("src"),
-                    "device": row.get("device"),
-                }
-            )
+        statuses.append(
+            {
+                "ip": ip,
+                "online": False,
+                "polled_at": _utc_now_iso(),
+                "methods": {},
+                "display": empty_display(),
+                "error": "waiting for background poll",
+                "src": row.get("src"),
+                "device": row.get("device"),
+            }
+        )
     alerts = update_ct_alerts(config, store, statuses)
     return {
         "enabled": True,
