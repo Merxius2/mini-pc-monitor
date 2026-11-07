@@ -1,7 +1,7 @@
-{% set d = dev.display %}
+{% set d = dev.display if dev.display is not none else {} %}
 {% set meta = namespace(id=dev.ip, label=dev.ip) %}
 {% for s in marstek.selected %}{% if s.ip == dev.ip %}{% set meta.id = s.id %}{% set meta.label = s.label or s.src or dev.ip %}{% endif %}{% endfor %}
-<article class="marstek-card marstek-flow-{{ d.power_flow or 'idle' }} {% if not dev.online %}marstek-card-offline{% endif %}">
+<article class="marstek-card marstek-flow-{{ d.get('power_flow', 'idle') }} {% if not dev.online %}marstek-card-offline{% endif %}">
   <header class="marstek-card-head">
     <div class="marstek-card-title-block">
       <form class="marstek-rename-form"
@@ -29,9 +29,9 @@
       <div class="marstek-soc-value">{{ d.soc if d.soc is not none else "—" }}<span>%</span></div>
       <div class="marstek-soc-label">State of charge</div>
     </div>
-    {% if d.power_flow == "charging" %}
+    {% if d.get('power_flow') == "charging" %}
     <p class="marstek-flow-hint charging">Charging →</p>
-    {% elif d.power_flow == "discharging" %}
+    {% elif d.get('power_flow') == "discharging" %}
     <p class="marstek-flow-hint discharging">← Discharging</p>
     {% endif %}
   </div>
@@ -39,24 +39,25 @@
   <dl class="marstek-stat-grid">
     <div>
       <dt>Mode</dt>
-      <dd>{{ d.mode_label or d.mode or "—" }}</dd>
+      <dd>{{ d.get('mode_label') or d.get('mode') or "—" }}</dd>
     </div>
     <div>
       <dt>Battery power</dt>
-      <dd>{% if d.bat_power is not none %}{{ d.bat_power }} W{% else %}—{% endif %}</dd>
+      <dd>{% if d.get('bat_power') is not none %}{{ d.bat_power }} W{% else %}—{% endif %}</dd>
     </div>
     <div>
       <dt>PV power</dt>
-      <dd>{% if d.pv_power is not none %}{{ d.pv_power }} W{% else %}—{% endif %}</dd>
+      <dd>{% if d.get('pv_power') is not none %}{{ d.pv_power }} W{% else %}—{% endif %}</dd>
     </div>
     <div>
       <dt>Grid</dt>
       <dd>
-        {% if d.ongrid_power is not none %}
-        {{ d.ongrid_power }} W
-        {% if d.ongrid_power < 0 %}
+        {% set grid = d.get('ongrid_power') %}
+        {% if grid is not none %}
+        {{ grid }} W
+        {% if grid < 0 %}
         <span class="marstek-grid-charging">charging</span>
-        {% elif d.ongrid_power > 0 %}
+        {% elif grid > 0 %}
         <span class="marstek-grid-discharging">discharging</span>
         {% else %}
         <span class="detail">idle</span>

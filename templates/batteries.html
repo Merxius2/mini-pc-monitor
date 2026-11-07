@@ -15,7 +15,7 @@
 
 <div id="marstekPanel"
      hx-get="/partials/marstek-overview"
-     hx-trigger="load, every {{ marstek.config.ui_refresh_seconds if marstek.config.ui_refresh_seconds is defined else 10 }}s, refreshMarstek from:body"
+     hx-trigger="load, every {{ marstek.config.ui_refresh_seconds | default(10) }}s, refreshMarstek from:body"
      hx-swap="innerHTML">
   {% include "partials/marstek_overview.html" %}
 </div>

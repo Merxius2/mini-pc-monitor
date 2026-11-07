@@ -433,6 +433,36 @@ def _scale_energy_wh(raw: Any, factor: float) -> float | None:
     return float(value) * factor
 
 
+def empty_display() -> dict[str, Any]:
+    return {
+        "soc": None,
+        "bat_power": None,
+        "bat_temp": None,
+        "bat_capacity_wh": None,
+        "rated_capacity_wh": None,
+        "pv_power": None,
+        "ongrid_power": None,
+        "offgrid_power": None,
+        "total_power": None,
+        "a_power": None,
+        "b_power": None,
+        "c_power": None,
+        "mode": None,
+        "mode_label": None,
+        "power_flow": "idle",
+        "firmware": None,
+        "ct_state": None,
+        "ct_connected": False,
+        "wifi_rssi": None,
+        "ssid": None,
+        "total_pv_wh": None,
+        "grid_export_wh": None,
+        "grid_import_wh": None,
+        "ct_input_wh": None,
+        "ct_output_wh": None,
+    }
+
+
 def _build_display(methods: dict[str, Any], meta: dict[str, Any]) -> dict[str, Any]:
     em = methods.get("EM.GetStatus") or {}
     mode = methods.get("ES.GetMode") or {}
@@ -739,7 +769,7 @@ def get_marstek_dashboard(config: MarstekConfig) -> dict[str, Any]:
                     "online": False,
                     "polled_at": _utc_now_iso(),
                     "methods": {},
-                    "display": {},
+                    "display": empty_display(),
                     "error": "waiting for background poll",
                     "src": row.get("src"),
                     "device": row.get("device"),
