@@ -5,13 +5,7 @@
     <h2>Dashboard</h2>
     <p>{{ status.now_str }} · {{ status.hostname }} · uptime {{ status.uptime }}</p>
   </div>
-  <div class="actions">
-    {% with schedule=status.schedule %}
-    {% include "partials/dashboard_power.html" %}
-    {% endwith %}
-  </div>
 </div>
-<div id="dashboardActionResult"></div>
 
 {% if marstek_enabled %}
 <div id="marstekSummaryPanel"
