@@ -1,0 +1,23 @@
+{% set s = marstek_summary %}
+<section class="panel marstek-home-summary">
+  <div class="panel-header">
+    Batteries
+    <a href="/batteries" class="hint">Details →</a>
+  </div>
+  <div class="marstek-home-grid">
+    {% for b in s.devices %}
+    <a href="/batteries" class="marstek-home-card marstek-flow-{{ b.power_flow }} {% if not b.online %}marstek-home-offline{% endif %}">
+      <div class="marstek-home-card-top">
+        <strong>{{ b.name }}</strong>
+        <span class="marstek-home-soc">{% if b.soc is not none %}{{ b.soc|round(0) }}%{% else %}—{% endif %}</span>
+      </div>
+      <p class="detail">
+        {{ b.mode_label or "—" }}
+        {% if b.ongrid_power is not none %} · {{ b.ongrid_power }} W grid{% endif %}
+        {% if b.power_flow == "charging" %} · <span class="marstek-flow-label">charging</span>{% elif b.power_flow == "discharging" %} · <span class="marstek-flow-label-disch">discharging</span>{% endif %}
+      </p>
+      <span class="marstek-home-pill {% if b.online %}online{% else %}offline{% endif %}">{{ "Online" if b.online else "Offline" }}</span>
+    </a>
+    {% endfor %}
+  </div>
+</section>

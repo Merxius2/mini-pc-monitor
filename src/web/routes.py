@@ -12,7 +12,14 @@ from src.azerothcore import get_azerothcore_status
 from src.clamav import get_clamav_scan_progress, get_clamav_status, start_clamav_scan
 from src.clamav_schedule import apply_clamav_schedule, set_clamav_schedule_enabled
 from src.domoticz import get_domoticz_status
-from src.marstek import discover_marstek_devices, get_marstek_dashboard, get_store
+from src.marstek import (
+    discover_marstek_devices,
+    get_marstek_dashboard,
+    get_marstek_summary,
+    get_store,
+    normalize_ip,
+    with_store_overrides,
+)
 from src.homeassistant import get_homeassistant_status
 from src.qr import qr_png_bytes
 from src.samba import (
@@ -117,10 +124,13 @@ def _status_context(settings) -> dict:
 @router.get("/", response_class=HTMLResponse)
 def dashboard_home(request: Request):
     settings = _settings(request)
+    marstek_refresh = max(5, int(settings.marstek.ui_refresh_seconds)) if settings.marstek.enabled else 10
     ctx = {
         "page_title": "Dashboard",
         "active_nav": "dashboard",
         "status": _status_context(settings),
+        "marstek_enabled": bool(settings.marstek.enabled),
+        "marstek_refresh_seconds": marstek_refresh,
         **_nav_context(settings),
     }
     return _templates(request).TemplateResponse(request, "dashboard.html", ctx)
@@ -199,6 +209,22 @@ def _marstek_context(settings) -> dict:
     return {"marstek": get_marstek_dashboard(settings.marstek)}
 
 
+@router.get("/partials/marstek-summary", response_class=HTMLResponse)
+def marstek_summary_partial(request: Request):
+    settings = _settings(request)
+    if not settings.marstek.enabled:
+        return HTMLResponse("")
+    summary = get_marstek_summary(settings.marstek)
+    if not summary.get("devices"):
+        return HTMLResponse("")
+    refresh = max(5, int(settings.marstek.ui_refresh_seconds))
+    return _templates(request).TemplateResponse(
+        request,
+        "partials/marstek_summary.html",
+        {"marstek_summary": summary, "marstek_refresh_seconds": refresh},
+    )
+
+
 @router.get("/batteries", response_class=HTMLResponse)
 def batteries_page(request: Request):
     settings = _settings(request)
@@ -250,7 +276,7 @@ def action_marstek_discover(request: Request):
     settings = _settings(request)
     if not settings.marstek.enabled:
         raise HTTPException(status_code=404, detail="Marstek disabled")
-    discovered = discover_marstek_devices(settings.marstek)
+    discovered = discover_marstek_devices(with_store_overrides(settings.marstek))
     store = get_store(settings.marstek)
     store.set_discovered(discovered)
     msg = f"Found {len(discovered)} Marstek device(s) on the LAN"
@@ -284,20 +310,59 @@ def action_marstek_select(
     return _marstek_action_response(request, True, f"Device {state}: {row.get('label')}")
 
 
+@router.post("/actions/marstek-rename")
+def action_marstek_rename(request: Request, device_id: str = Form(...), label: str = Form(...)):
+    settings = _settings(request)
+    if not settings.marstek.enabled:
+        raise HTTPException(status_code=404, detail="Marstek disabled")
+    name = label.strip()
+    if not name:
+        return _marstek_action_response(request, False, "Enter a name")
+    store = get_store(settings.marstek)
+    store.update_label(device_id.strip(), name)
+    return _marstek_action_response(request, True, f"Renamed to {name}")
+
+
+@router.post("/actions/marstek-udp-settings")
+def action_marstek_udp_settings(
+    request: Request,
+    bind_port: str = Form(...),
+    udp_port: str = Form(...),
+):
+    settings = _settings(request)
+    if not settings.marstek.enabled:
+        raise HTTPException(status_code=404, detail="Marstek disabled")
+    try:
+        bind_i = int(bind_port.strip())
+        udp_i = int(udp_port.strip())
+    except ValueError:
+        return _marstek_action_response(request, False, "Ports must be numbers")
+    if not (1 <= bind_i <= 65535 and 1 <= udp_i <= 65535):
+        return _marstek_action_response(request, False, "Ports must be between 1 and 65535")
+    store = get_store(settings.marstek)
+    store.set_client_settings(bind_port=bind_i, udp_port=udp_i)
+    return _marstek_action_response(
+        request,
+        True,
+        f"UDP settings saved (listen {bind_i}, device port {udp_i})",
+    )
+
+
 @router.post("/actions/marstek-add-manual")
 def action_marstek_add_manual(request: Request, ip: str = Form(...)):
     settings = _settings(request)
     if not settings.marstek.enabled:
         raise HTTPException(status_code=404, detail="Marstek disabled")
-    host = ip.strip()
+    host = normalize_ip(ip.strip())
     if not host:
         return _marstek_action_response(request, False, "Enter an IP address")
     from src.marstek import marstek_rpc, _device_from_message
 
-    message = marstek_rpc(settings.marstek, host, "Marstek.GetDevice", params={"ble_mac": "0"}, req_id=77)
+    cfg = with_store_overrides(settings.marstek)
+    message = marstek_rpc(cfg, host, "Marstek.GetDevice", params={"ble_mac": "0"}, req_id=77)
     device = _device_from_message(message, fallback_ip=host)
     if not device:
-        return _marstek_action_response(request, False, f"No reply from {host} on UDP {settings.marstek.udp_port}")
+        return _marstek_action_response(request, False, f"No reply from {host} on UDP {cfg.udp_port}")
     store = get_store(settings.marstek)
     store.set_discovered([device])
     store.toggle_selected({**device, "ip": device.get("ip") or host}, on=True)

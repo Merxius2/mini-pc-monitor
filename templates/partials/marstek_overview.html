@@ -13,6 +13,29 @@
 
 <section class="panel marstek-section">
   <div class="panel-header">
+    Local UDP settings
+  </div>
+  <form class="marstek-udp-settings"
+        hx-post="/actions/marstek-udp-settings"
+        hx-target="#marstekActionResult"
+        hx-swap="innerHTML">
+    <label>
+      <span>Listen port (this server)</span>
+      <input name="bind_port" type="number" min="1" max="65535" required class="mono"
+             value="{{ m.config.bind_port }}" />
+    </label>
+    <label>
+      <span>Device UDP port</span>
+      <input name="udp_port" type="number" min="1" max="65535" required class="mono"
+             value="{{ m.config.udp_port }}" />
+    </label>
+    <button type="submit" class="btn btn-sm">Save ports</button>
+  </form>
+  <p class="detail marstek-hint">Marstek app → Local API port. The dashboard must bind the <strong>listen</strong> port to receive replies. UI refreshes every {{ m.config.ui_refresh_seconds }}s; device data may take longer over Wi‑Fi.</p>
+</section>
+
+<section class="panel marstek-section">
+  <div class="panel-header">
     Discover &amp; select
     <span class="tag would_hold">UDP {{ m.config.udp_port }}</span>
   </div>

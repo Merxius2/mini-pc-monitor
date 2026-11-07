@@ -6,6 +6,7 @@ import json
 import socket
 import threading
 import time
+from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -20,6 +21,41 @@ _STATUS_CACHE: dict[str, dict[str, Any]] = {}
 _LINK_RTT: dict[str, tuple[float, float]] = {}  # host -> (monotonic, rtt_ms)
 
 # Wi‑Fi firmware rate-limits back-to-back queries (~3.7 s). ES.GetStatus is flaky on some Venus E fw.
+_MODE_LABELS = {
+    "auto": "Self-consumption",
+    "ai": "AI",
+    "manual": "Manual",
+    "passive": "Passive",
+    "ups": "UPS",
+}
+
+
+def format_mode_label(raw: Any) -> str | None:
+    if raw is None:
+        return None
+    key = str(raw).strip().lower()
+    if not key:
+        return None
+    return _MODE_LABELS.get(key, str(raw).strip())
+
+
+def _power_flow(ongrid_power: Any, bat_power: Any) -> str:
+    """Marstek ongrid: negative = battery charging (grid import), positive = discharging."""
+    grid = _parse_number(ongrid_power)
+    if grid is not None:
+        if grid < -15:
+            return "charging"
+        if grid > 15:
+            return "discharging"
+    bat = _parse_number(bat_power)
+    if bat is not None:
+        if bat > 15:
+            return "charging"
+        if bat < -15:
+            return "discharging"
+    return "idle"
+
+
 _POLL_METHODS = (
     "Marstek.GetDevice",
     "ES.GetMode",
@@ -88,15 +124,16 @@ class MarstekStore:
 
     def load(self) -> None:
         if not self.path.is_file():
-            self._data = {"selected": [], "discovered": [], "ct_lost_since": {}}
+            self._data = {"selected": [], "discovered": [], "ct_lost_since": {}, "client": {}}
             return
         try:
             self._data = json.loads(self.path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
-            self._data = {"selected": [], "discovered": [], "ct_lost_since": {}}
+            self._data = {"selected": [], "discovered": [], "ct_lost_since": {}, "client": {}}
         self._data.setdefault("selected", [])
         self._data.setdefault("discovered", [])
         self._data.setdefault("ct_lost_since", {})
+        self._data.setdefault("client", {})
         selected = self._normalize_rows(list(self._data.get("selected") or []))
         discovered = self._normalize_rows(list(self._data.get("discovered") or []))
         if selected != self._data.get("selected") or discovered != self._data.get("discovered"):
@@ -146,8 +183,11 @@ class MarstekStore:
         self.save()
 
     def update_label(self, device_id: str, label: str) -> None:
+        key = normalize_ip(device_id) or device_id
         for row in self._data["selected"]:
-            if row.get("id") == device_id:
+            rid = str(row.get("id") or "")
+            rip = normalize_ip(row.get("ip") or "")
+            if rid == device_id or rid == key or rip == key:
                 row["label"] = label.strip() or row.get("label") or device_id
         self.save()
 
@@ -157,6 +197,26 @@ class MarstekStore:
 
     def set_ct_lost_since(self, mapping: dict[str, str]) -> None:
         self._data["ct_lost_since"] = dict(mapping)
+        self.save()
+
+    def client_settings(self) -> dict[str, int]:
+        raw = self._data.get("client") or {}
+        out: dict[str, int] = {}
+        for key in ("bind_port", "udp_port"):
+            if key in raw:
+                try:
+                    out[key] = int(raw[key])
+                except (TypeError, ValueError):
+                    continue
+        return out
+
+    def set_client_settings(self, *, bind_port: int | None = None, udp_port: int | None = None) -> None:
+        client = dict(self._data.get("client") or {})
+        if bind_port is not None:
+            client["bind_port"] = int(bind_port)
+        if udp_port is not None:
+            client["udp_port"] = int(udp_port)
+        self._data["client"] = client
         self.save()
 
 
@@ -400,20 +460,27 @@ def _build_display(methods: dict[str, Any], meta: dict[str, Any]) -> dict[str, A
     if rated is None:
         rated = _parse_number(meta.get("rated_capacity_wh"))
 
+    ongrid = _first_number(es.get("ongrid_power"), mode.get("ongrid_power"))
+    bat_pwr = _first_number(es.get("bat_power"), mode.get("bat_power"))
+    raw_mode = mode.get("mode")
+    flow = _power_flow(ongrid, bat_pwr)
+
     return {
         "soc": soc,
-        "bat_power": _first_number(es.get("bat_power"), mode.get("bat_power")),
+        "bat_power": bat_pwr,
         "bat_temp": bat.get("bat_temp"),
         "bat_capacity_wh": bat_cap,
         "rated_capacity_wh": rated,
         "pv_power": _first_number(es.get("pv_power"), mode.get("pv_power")),
-        "ongrid_power": _first_number(es.get("ongrid_power"), mode.get("ongrid_power")),
+        "ongrid_power": ongrid,
         "offgrid_power": _first_number(es.get("offgrid_power"), mode.get("offgrid_power")),
         "total_power": _first_number(em.get("total_power"), mode.get("total_power")),
         "a_power": _first_number(em.get("a_power"), mode.get("a_power")),
         "b_power": _first_number(em.get("b_power"), mode.get("b_power")),
         "c_power": _first_number(em.get("c_power"), mode.get("c_power")),
-        "mode": mode.get("mode"),
+        "mode": raw_mode,
+        "mode_label": format_mode_label(raw_mode),
+        "power_flow": flow,
         "firmware": meta.get("ver"),
         "ct_state": ct_state,
         "ct_connected": ct_state == 1,
@@ -506,6 +573,26 @@ def get_store(config: MarstekConfig) -> MarstekStore:
     return MarstekStore(Path(config.data_file))
 
 
+def with_store_overrides(config: MarstekConfig) -> MarstekConfig:
+    overrides = get_store(config).client_settings()
+    if not overrides:
+        return config
+    kwargs: dict[str, Any] = {}
+    if "bind_port" in overrides:
+        kwargs["bind_port"] = overrides["bind_port"]
+    if "udp_port" in overrides:
+        kwargs["udp_port"] = overrides["udp_port"]
+    return replace(config, **kwargs)
+
+
+def label_for_device(store: MarstekStore, ip: str, fallback: str | None = None) -> str:
+    ip = normalize_ip(ip)
+    for row in store.selected:
+        if normalize_ip(row.get("ip") or "") == ip:
+            return str(row.get("label") or row.get("src") or fallback or ip)
+    return str(fallback or ip)
+
+
 def _ensure_poller(config: MarstekConfig) -> None:
     global _POLLER_STARTED
     if not config.enabled:
@@ -520,6 +607,7 @@ def _ensure_poller(config: MarstekConfig) -> None:
 
 def _poller_loop(config: MarstekConfig) -> None:
     while True:
+        cfg = with_store_overrides(config)
         store = get_store(config)
         ips = [normalize_ip(row["ip"]) for row in store.selected if row.get("ip")]
         if not ips:
@@ -527,7 +615,7 @@ def _poller_loop(config: MarstekConfig) -> None:
             continue
         for ip in ips:
             try:
-                status = poll_marstek_device(config, ip)
+                status = poll_marstek_device(cfg, ip)
             except Exception:
                 status = {
                     "ip": ip,
@@ -598,9 +686,39 @@ def update_ct_alerts(
     return alerts
 
 
+def get_marstek_summary(config: MarstekConfig) -> dict[str, Any]:
+    if not config.enabled:
+        return {"enabled": False, "devices": [], "count": 0}
+    dash = get_marstek_dashboard(config)
+    store = get_store(config)
+    rows: list[dict[str, Any]] = []
+    for dev in dash.get("devices") or []:
+        ip = normalize_ip(dev.get("ip") or "")
+        disp = dev.get("display") or {}
+        rows.append(
+            {
+                "ip": ip,
+                "name": label_for_device(store, ip, dev.get("src")),
+                "online": bool(dev.get("online")),
+                "soc": disp.get("soc"),
+                "mode_label": disp.get("mode_label") or disp.get("mode"),
+                "power_flow": disp.get("power_flow") or "idle",
+                "ongrid_power": disp.get("ongrid_power"),
+                "ct_connected": disp.get("ct_connected"),
+            }
+        )
+    return {
+        "enabled": True,
+        "devices": rows,
+        "count": len(rows),
+        "has_ct_alerts": dash.get("has_ct_alerts"),
+    }
+
+
 def get_marstek_dashboard(config: MarstekConfig) -> dict[str, Any]:
     if not config.enabled:
         return {"enabled": False}
+    cfg = with_store_overrides(config)
     _ensure_poller(config)
     store = get_store(config)
     statuses: list[dict[str, Any]] = []
@@ -613,7 +731,7 @@ def get_marstek_dashboard(config: MarstekConfig) -> dict[str, Any]:
             statuses.append(cached)
             continue
         if not _STATUS_CACHE:
-            statuses.append(poll_marstek_device(config, ip))
+            statuses.append(poll_marstek_device(cfg, ip))
         else:
             statuses.append(
                 {
@@ -630,7 +748,7 @@ def get_marstek_dashboard(config: MarstekConfig) -> dict[str, Any]:
     alerts = update_ct_alerts(config, store, statuses)
     return {
         "enabled": True,
-        "config": config,
+        "config": cfg,
         "selected": store.selected,
         "selected_ids": {str(s.get("id") or "") for s in store.selected if s.get("id")},
         "discovered": store.discovered,

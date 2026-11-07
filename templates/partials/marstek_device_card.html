@@ -1,10 +1,17 @@
 {% set d = dev.display %}
-{% set label = namespace(name=dev.ip) %}
-{% for s in marstek.selected %}{% if s.ip == dev.ip %}{% set label.name = s.label or s.src or dev.ip %}{% endif %}{% endfor %}
-<article class="marstek-card {% if not dev.online %}marstek-card-offline{% endif %}">
+{% set meta = namespace(id=dev.ip, label=dev.ip) %}
+{% for s in marstek.selected %}{% if s.ip == dev.ip %}{% set meta.id = s.id %}{% set meta.label = s.label or s.src or dev.ip %}{% endif %}{% endfor %}
+<article class="marstek-card marstek-flow-{{ d.power_flow or 'idle' }} {% if not dev.online %}marstek-card-offline{% endif %}">
   <header class="marstek-card-head">
-    <div>
-      <h3>{{ label.name }}</h3>
+    <div class="marstek-card-title-block">
+      <form class="marstek-rename-form"
+            hx-post="/actions/marstek-rename"
+            hx-target="#marstekActionResult"
+            hx-swap="innerHTML">
+        <input type="hidden" name="device_id" value="{{ meta.id }}" />
+        <input name="label" type="text" class="marstek-rename-input" value="{{ meta.label }}" aria-label="Battery name" />
+        <button type="submit" class="btn btn-sm">Save name</button>
+      </form>
       <p class="detail mono">{{ dev.src or dev.device or dev.ip }}</p>
     </div>
     <span class="marstek-pill {% if dev.online %}online{% else %}offline{% endif %}">
@@ -16,15 +23,23 @@
   <p class="marstek-card-error">{{ dev.error }}</p>
   {% endif %}
 
-  <div class="marstek-soc-ring" style="--soc: {{ d.soc or 0 }};">
-    <div class="marstek-soc-value">{{ d.soc if d.soc is not none else "—" }}<span>%</span></div>
-    <div class="marstek-soc-label">State of charge</div>
+  <div class="marstek-soc-wrap">
+    <div class="marstek-soc-ring" style="--soc: {{ d.soc or 0 }};">
+      <div class="marstek-flow-arrows" aria-hidden="true"></div>
+      <div class="marstek-soc-value">{{ d.soc if d.soc is not none else "—" }}<span>%</span></div>
+      <div class="marstek-soc-label">State of charge</div>
+    </div>
+    {% if d.power_flow == "charging" %}
+    <p class="marstek-flow-hint charging">Charging →</p>
+    {% elif d.power_flow == "discharging" %}
+    <p class="marstek-flow-hint discharging">← Discharging</p>
+    {% endif %}
   </div>
 
   <dl class="marstek-stat-grid">
     <div>
       <dt>Mode</dt>
-      <dd>{{ d.mode or "—" }}</dd>
+      <dd>{{ d.mode_label or d.mode or "—" }}</dd>
     </div>
     <div>
       <dt>Battery power</dt>
@@ -36,7 +51,18 @@
     </div>
     <div>
       <dt>Grid</dt>
-      <dd>{% if d.ongrid_power is not none %}{{ d.ongrid_power }} W{% if d.ongrid_power < 0 %} <span class="detail">(export)</span>{% elif d.ongrid_power > 0 %} <span class="detail">(import)</span>{% endif %}{% else %}—{% endif %}</dd>
+      <dd>
+        {% if d.ongrid_power is not none %}
+        {{ d.ongrid_power }} W
+        {% if d.ongrid_power < 0 %}
+        <span class="marstek-grid-charging">charging</span>
+        {% elif d.ongrid_power > 0 %}
+        <span class="marstek-grid-discharging">discharging</span>
+        {% else %}
+        <span class="detail">idle</span>
+        {% endif %}
+        {% else %}—{% endif %}
+      </dd>
     </div>
     <div>
       <dt>CT total</dt>

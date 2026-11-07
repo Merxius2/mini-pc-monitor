@@ -2887,3 +2887,200 @@
     font-size: 0.8rem;
     margin: 0 0 0.75rem;
   }
+
+  .marstek-udp-settings {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.25rem;
+    align-items: flex-end;
+    padding: 0 1.15rem 1rem;
+  }
+
+  .marstek-udp-settings label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.55);
+  }
+
+  .marstek-udp-settings input {
+    min-width: 6.5rem;
+    padding: 0.45rem 0.65rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+  }
+
+  .marstek-rename-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    align-items: center;
+    margin-bottom: 0.25rem;
+  }
+
+  .marstek-rename-input {
+    flex: 1 1 8rem;
+    min-width: 6rem;
+    padding: 0.35rem 0.55rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    font-weight: 600;
+    font-size: 1rem;
+  }
+
+  .marstek-soc-wrap {
+    position: relative;
+    margin-bottom: 0.75rem;
+  }
+
+  .marstek-flow-arrows {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    pointer-events: none;
+    opacity: 0;
+  }
+
+  .marstek-flow-charging .marstek-flow-arrows {
+    opacity: 1;
+    background: linear-gradient(90deg, transparent 30%, rgba(94, 234, 212, 0.55) 50%, transparent 70%);
+    background-size: 200% 100%;
+    animation: marstek-flow-right 1.6s linear infinite;
+  }
+
+  .marstek-flow-discharging .marstek-flow-arrows {
+    opacity: 1;
+    background: linear-gradient(270deg, transparent 30%, rgba(251, 191, 36, 0.45) 50%, transparent 70%);
+    background-size: 200% 100%;
+    animation: marstek-flow-left 1.6s linear infinite;
+  }
+
+  .marstek-flow-charging .marstek-soc-ring {
+    box-shadow: 0 0 0 2px rgba(94, 234, 212, 0.35), 0 0 24px rgba(94, 234, 212, 0.15);
+  }
+
+  @keyframes marstek-flow-right {
+    from {
+      background-position: 100% 0;
+    }
+    to {
+      background-position: -100% 0;
+    }
+  }
+
+  @keyframes marstek-flow-left {
+    from {
+      background-position: -100% 0;
+    }
+    to {
+      background-position: 100% 0;
+    }
+  }
+
+  .marstek-flow-hint {
+    text-align: center;
+    font-size: 0.75rem;
+    margin: 0.35rem 0 0;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .marstek-flow-hint.charging {
+    color: #5eead4;
+  }
+
+  .marstek-flow-hint.discharging {
+    color: #fbbf24;
+  }
+
+  .marstek-grid-charging {
+    color: #5eead4;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    margin-left: 0.25rem;
+  }
+
+  .marstek-grid-discharging {
+    color: #fbbf24;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    margin-left: 0.25rem;
+  }
+
+  .marstek-home-summary {
+    margin-bottom: 1rem;
+  }
+
+  .marstek-home-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+    gap: 0.65rem;
+    padding: 0 1.15rem 1.15rem;
+  }
+
+  .marstek-home-card {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    padding: 0.85rem 1rem;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    position: relative;
+    transition: border-color 0.15s;
+  }
+
+  .marstek-home-card:hover {
+    border-color: rgba(94, 234, 212, 0.45);
+  }
+
+  .marstek-home-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.5rem;
+  }
+
+  .marstek-home-soc {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #5eead4;
+  }
+
+  .marstek-home-pill {
+    position: absolute;
+    top: 0.65rem;
+    right: 0.65rem;
+    font-size: 0.62rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    padding: 0.15rem 0.4rem;
+    border-radius: 999px;
+  }
+
+  .marstek-home-pill.online {
+    background: rgba(94, 234, 212, 0.15);
+    color: #5eead4;
+  }
+
+  .marstek-home-pill.offline {
+    background: rgba(248, 113, 113, 0.12);
+    color: #f87171;
+  }
+
+  .marstek-flow-label {
+    color: #5eead4;
+  }
+
+  .marstek-flow-label-disch {
+    color: #fbbf24;
+  }
+
+  .marstek-home-offline {
+    opacity: 0.75;
+  }

@@ -237,6 +237,7 @@ class MarstekConfig:
     request_delay_fast: float = 0.2
     wifi_rtt_threshold_ms: float = 150.0
     poll_pause_seconds: float = 3.0
+    ui_refresh_seconds: int = 10
     discover_timeout: float = 4.0
     ct_alert_after_seconds: int = 300
     data_file: str = "/var/lib/mini-pc-monitor/marstek.json"

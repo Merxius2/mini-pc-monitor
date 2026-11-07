@@ -8,6 +8,8 @@ from src.marstek import (
     MarstekStore,
     _build_display,
     _device_from_message,
+    _power_flow,
+    format_mode_label,
     normalize_ip,
     update_ct_alerts,
 )
@@ -34,9 +36,21 @@ class BuildDisplayTests(unittest.TestCase):
             {},
         )
         self.assertEqual(display["soc"], 91)
-        self.assertEqual(display["mode"], "Auto")
+        self.assertEqual(display["mode_label"], "Self-consumption")
         self.assertEqual(display["ongrid_power"], -300)
+        self.assertEqual(display["power_flow"], "charging")
         self.assertEqual(display["ct_state"], 1)
+
+
+class PowerFlowTests(unittest.TestCase):
+    def test_negative_grid_is_charging(self) -> None:
+        self.assertEqual(_power_flow(-200, None), "charging")
+        self.assertEqual(_power_flow(200, None), "discharging")
+
+
+class ModeLabelTests(unittest.TestCase):
+    def test_auto_is_self_consumption(self) -> None:
+        self.assertEqual(format_mode_label("Auto"), "Self-consumption")
 
 
 class DeviceFromMessageTests(unittest.TestCase):
