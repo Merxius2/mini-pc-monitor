@@ -23,8 +23,8 @@ _LINK_RTT: dict[str, tuple[float, float]] = {}  # host -> (monotonic, rtt_ms)
 _POLL_METHODS = (
     "Marstek.GetDevice",
     "ES.GetMode",
-    "EM.GetStatus",
     "Bat.GetStatus",
+    "EM.GetStatus",
     "Wifi.GetStatus",
     "ES.GetStatus",
 )
@@ -465,6 +465,17 @@ def poll_marstek_device(config: MarstekConfig, ip: str) -> dict[str, Any]:
         finally:
             sock.close()
 
+    if status["online"] and "Bat.GetStatus" not in status["methods"]:
+        time.sleep(delay or config.request_delay)
+        with _UDP_LOCK:
+            sock = _make_socket(config)
+            try:
+                reply = _rpc_on_socket(sock, config, ip, "Bat.GetStatus", req_id=1999)
+                if reply.get("result") is not None:
+                    status["methods"]["Bat.GetStatus"] = reply["result"]
+            finally:
+                sock.close()
+
     if status["methods"].get("Marstek.GetDevice"):
         device = _device_from_message(
             {"result": status["methods"]["Marstek.GetDevice"], "src": status.get("src")},
@@ -527,6 +538,7 @@ def _poller_loop(config: MarstekConfig) -> None:
                     "error": "poll failed",
                 }
             _STATUS_CACHE[ip] = status
+            time.sleep(max(1.0, config.poll_pause_seconds))
         time.sleep(max(1.0, config.poll_pause_seconds))
 
 
