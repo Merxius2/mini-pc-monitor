@@ -63,12 +63,28 @@ minipc_md_stop_for_reassemble() {
   mdadm --stop "$MD_DEV" >/dev/null 2>&1 || true
 }
 
+stop_foreign_md_arrays() {
+  local md
+  while read -r md; do
+    [ -n "$md" ] || continue
+    if [ "$md" = "md0" ]; then
+      continue
+    fi
+    mdadm --stop "/dev/$md" >/dev/null 2>&1 || true
+  done < <(grep -oE '^md[0-9]+' /proc/mdstat 2>/dev/null | sort -u)
+}
+
 assemble_md0() {
   local uuid members=()
   uuid="$(array_uuid)"
   if [ -z "${uuid:-}" ]; then
     mdadm --assemble --scan >/dev/null 2>&1 || true
     return 0
+  fi
+
+  stop_foreign_md_arrays
+  if md0_broken; then
+    mdadm --stop "$MD_DEV" >/dev/null 2>&1 || true
   fi
 
   udevadm settle 2>/dev/null || true
