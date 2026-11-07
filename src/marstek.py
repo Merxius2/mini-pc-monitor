@@ -56,6 +56,20 @@ def _power_flow(ongrid_power: Any, bat_power: Any) -> str:
     return "idle"
 
 
+# Open API Rev 3.1 — query methods only (no SetMode, DOD.SET, Led.Ctrl, etc.).
+_READ_ONLY_METHODS = frozenset(
+    {
+        "Marstek.GetDevice",
+        "Wifi.GetStatus",
+        "BLE.GetStatus",
+        "Bat.GetStatus",
+        "ES.GetStatus",
+        "ES.GetMode",
+        "EM.GetStatus",
+        "PV.GetStatus",
+    }
+)
+
 _POLL_METHODS = (
     "Marstek.GetDevice",
     "ES.GetMode",
@@ -64,6 +78,21 @@ _POLL_METHODS = (
     "Wifi.GetStatus",
     "ES.GetStatus",
 )
+
+
+def read_only_methods() -> frozenset[str]:
+    return _READ_ONLY_METHODS
+
+
+def _reject_write_method(method: str) -> dict[str, Any] | None:
+    if method in _READ_ONLY_METHODS:
+        return None
+    return {
+        "error": {
+            "message": f"read-only dashboard: refused Marstek method {method!r}",
+            "code": -32001,
+        }
+    }
 
 
 def normalize_ip(ip: str | None) -> str:
@@ -336,6 +365,9 @@ def marstek_rpc(
     timeout: float | None = None,
 ) -> dict[str, Any]:
     _ = timeout
+    blocked = _reject_write_method(method)
+    if blocked is not None:
+        return blocked
     host = normalize_ip(host)
     with _UDP_LOCK:
         sock = _make_socket(config)

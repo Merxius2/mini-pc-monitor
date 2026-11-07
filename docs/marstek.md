@@ -2,6 +2,10 @@
 
 Dashboard page: **http://192.168.1.30:8080/batteries**
 
+## Read-only on devices
+
+The dashboard **never** sends write commands to batteries (`ES.SetMode`, `DOD.SET`, `Led.Ctrl`, etc.). UDP traffic is limited to **Get\*** / status queries (see `read_only_methods()` in `src/marstek.py`). Saving names, UDP ports, or which units to monitor only updates local state in `marstek.json`.
+
 ## Setup on the battery
 
 1. In the Marstek app, enable **Local API** for each Venus V3.

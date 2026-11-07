@@ -10,7 +10,9 @@ from src.marstek import (
     _device_from_message,
     _power_flow,
     format_mode_label,
+    marstek_rpc,
     normalize_ip,
+    read_only_methods,
     update_ct_alerts,
 )
 
@@ -51,6 +53,21 @@ class PowerFlowTests(unittest.TestCase):
 class ModeLabelTests(unittest.TestCase):
     def test_auto_is_self_consumption(self) -> None:
         self.assertEqual(format_mode_label("Auto"), "Self-consumption")
+
+
+class ReadOnlyApiTests(unittest.TestCase):
+    def test_poll_methods_are_whitelisted(self) -> None:
+        allowed = read_only_methods()
+        from src.marstek import _POLL_METHODS
+
+        for name in _POLL_METHODS:
+            self.assertIn(name, allowed)
+
+    def test_set_mode_is_not_sent(self) -> None:
+        cfg = MarstekConfig()
+        reply = marstek_rpc(cfg, "192.168.1.1", "ES.SetMode", req_id=1)
+        self.assertEqual(reply["error"]["code"], -32001)
+        self.assertIn("read-only", reply["error"]["message"])
 
 
 class DeviceFromMessageTests(unittest.TestCase):
