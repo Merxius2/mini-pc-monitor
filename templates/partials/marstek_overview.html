@@ -54,7 +54,7 @@
       <button type="submit" class="btn btn-sm">Add by IP</button>
     </form>
   </div>
-  <p class="detail marstek-hint">Enable <strong>Local API</strong> in the Marstek app. Devices reply on UDP port 30000; this dashboard binds local port {{ m.config.bind_port }} for replies.</p>
+  <p class="detail marstek-hint">Enable <strong>Local API</strong> in the Marstek app. Devices reply on UDP port 30000; this dashboard binds local port {{ m.config.bind_port }} for replies. <strong>Bat.GetStatus</strong> is off by default (some firmware resets when it is polled).</p>
 
   {% if m.discovered %}
   <div class="marstek-discover-grid">

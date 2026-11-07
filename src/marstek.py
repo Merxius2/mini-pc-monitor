@@ -70,14 +70,32 @@ _READ_ONLY_METHODS = frozenset(
     }
 )
 
-_POLL_METHODS = (
+# Core poll path — excludes Bat.GetStatus (reset-prone on firmware < 150 per vendor/HA reports).
+_POLL_METHODS_CORE = (
     "Marstek.GetDevice",
     "ES.GetMode",
-    "Bat.GetStatus",
     "EM.GetStatus",
-    "Wifi.GetStatus",
     "ES.GetStatus",
 )
+
+
+def _poll_methods_for_device(config: MarstekConfig, firmware_ver: int | None) -> list[str]:
+    methods = list(_POLL_METHODS_CORE)
+    if config.poll_wifi_get_status:
+        methods.insert(3, "Wifi.GetStatus")
+    if config.poll_bat_get_status and firmware_ver is not None and firmware_ver >= config.bat_get_status_min_firmware:
+        methods.insert(2, "Bat.GetStatus")
+    return methods
+
+
+def _parse_firmware_ver(raw: Any) -> int | None:
+    value = _parse_number(raw)
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def read_only_methods() -> frozenset[str]:
@@ -568,42 +586,46 @@ def poll_marstek_device(config: MarstekConfig, ip: str) -> dict[str, Any]:
         "error": None,
     }
     meta: dict[str, Any] = {}
+    firmware_ver: int | None = None
 
     with _UDP_LOCK:
         sock = _make_socket(config)
         try:
-            for idx, method in enumerate(_POLL_METHODS, start=1):
-                if idx > 1 and delay > 0:
+            reply = _rpc_on_socket(sock, config, ip, "Marstek.GetDevice", req_id=1000)
+            if reply.get("result") is not None:
+                status["online"] = True
+                result = reply["result"]
+                status["methods"]["Marstek.GetDevice"] = result
+                if isinstance(result, dict):
+                    meta["ver"] = result.get("ver")
+                    meta["wifi_name"] = result.get("wifi_name")
+                    firmware_ver = _parse_firmware_ver(result.get("ver"))
+                if reply.get("src"):
+                    status["src"] = reply["src"]
+                if isinstance(result, dict) and result.get("device"):
+                    status["device"] = result.get("device")
+            elif reply.get("error"):
+                err = reply["error"]
+                msg = err.get("message") if isinstance(err, dict) else str(err)
+                status["errors"]["Marstek.GetDevice"] = msg
+
+            plan = _poll_methods_for_device(config, firmware_ver)[1:]
+            for idx, method in enumerate(plan, start=1):
+                if delay > 0:
                     time.sleep(delay)
                 reply = _rpc_on_socket(sock, config, ip, method, req_id=1000 + idx)
                 if reply.get("result") is not None:
                     status["online"] = True
                     result = reply["result"]
                     status["methods"][method] = result
-                    if method == "Marstek.GetDevice" and isinstance(result, dict):
-                        meta["ver"] = result.get("ver")
-                        meta["wifi_name"] = result.get("wifi_name")
-                    if reply.get("src"):
+                    if reply.get("src") and not status.get("src"):
                         status["src"] = reply["src"]
-                    if isinstance(result, dict) and result.get("device"):
-                        status["device"] = result.get("device")
                 elif reply.get("error"):
                     err = reply["error"]
                     msg = err.get("message") if isinstance(err, dict) else str(err)
                     status["errors"][method] = msg
         finally:
             sock.close()
-
-    if status["online"] and "Bat.GetStatus" not in status["methods"]:
-        time.sleep(delay or config.request_delay)
-        with _UDP_LOCK:
-            sock = _make_socket(config)
-            try:
-                reply = _rpc_on_socket(sock, config, ip, "Bat.GetStatus", req_id=1999)
-                if reply.get("result") is not None:
-                    status["methods"]["Bat.GetStatus"] = reply["result"]
-            finally:
-                sock.close()
 
     if status["methods"].get("Marstek.GetDevice"):
         device = _device_from_message(

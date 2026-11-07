@@ -185,6 +185,10 @@ marstek:
   request_delay: 3.8
   request_timeout: 5.0
   ui_refresh_seconds: 10
+  poll_pause_seconds: 30
+  poll_bat_get_status: false
+  bat_get_status_min_firmware: 150
+  poll_wifi_get_status: true
   broadcast_hosts:
     - 192.168.1.255
     - 255.255.255.255

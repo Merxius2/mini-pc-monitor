@@ -58,10 +58,15 @@ class ModeLabelTests(unittest.TestCase):
 class ReadOnlyApiTests(unittest.TestCase):
     def test_poll_methods_are_whitelisted(self) -> None:
         allowed = read_only_methods()
-        from src.marstek import _POLL_METHODS
+        from src.marstek import _POLL_METHODS_CORE, _poll_methods_for_device
 
-        for name in _POLL_METHODS:
+        for name in _POLL_METHODS_CORE:
             self.assertIn(name, allowed)
+        cfg = MarstekConfig(poll_bat_get_status=True, bat_get_status_min_firmware=150)
+        plan = _poll_methods_for_device(cfg, 150)
+        self.assertIn("Bat.GetStatus", plan)
+        plan_old = _poll_methods_for_device(cfg, 148)
+        self.assertNotIn("Bat.GetStatus", plan_old)
 
     def test_set_mode_is_not_sent(self) -> None:
         cfg = MarstekConfig()

@@ -6,6 +6,12 @@ Dashboard page: **http://192.168.1.30:8080/batteries**
 
 The dashboard **never** sends write commands to batteries (`ES.SetMode`, `DOD.SET`, `Led.Ctrl`, etc.). UDP traffic is limited to **Get\*** / status queries (see `read_only_methods()` in `src/marstek.py`). Saving names, UDP ports, or which units to monitor only updates local state in `marstek.json`.
 
+## Factory reset / `Bat.GetStatus`
+
+On several Venus firmware builds, **`Bat.GetStatus` is reported to trigger factory resets or instability** (Marstek local-API integrators disable it on firmware below 150). This dashboard therefore **does not call `Bat.GetStatus` by default** (`poll_bat_get_status: false`). SOC and grid data come from `ES.GetMode`, `EM.GetStatus`, and `ES.GetStatus`. Temperature and exact remaining Wh need `poll_bat_get_status: true` and firmware **≥ `bat_get_status_min_firmware`** (default 150) — only enable on a unit you have confirmed tolerates it.
+
+Polling is spaced (`request_delay`, `poll_pause_seconds`) to reduce Wi‑Fi load. Avoid frequent **Scan LAN** unless needed.
+
 ## Setup on the battery
 
 1. In the Marstek app, enable **Local API** for each Venus V3.

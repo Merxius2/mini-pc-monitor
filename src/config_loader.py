@@ -236,10 +236,14 @@ class MarstekConfig:
     request_delay: float = 3.8
     request_delay_fast: float = 0.2
     wifi_rtt_threshold_ms: float = 150.0
-    poll_pause_seconds: float = 3.0
+    poll_pause_seconds: float = 30.0
     ui_refresh_seconds: int = 10
     discover_timeout: float = 4.0
     ct_alert_after_seconds: int = 300
+    # Bat.GetStatus can factory-reset some Venus firmware (omit below min ver); off by default.
+    poll_bat_get_status: bool = False
+    bat_get_status_min_firmware: int = 150
+    poll_wifi_get_status: bool = True
     data_file: str = "/var/lib/mini-pc-monitor/marstek.json"
     broadcast_hosts: list[str] = field(default_factory=lambda: ["192.168.1.255"])
     manual_hosts: list[str] = field(default_factory=list)
