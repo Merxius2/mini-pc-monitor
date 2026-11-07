@@ -227,6 +227,20 @@ class ClamAvConfig:
 
 
 @dataclass
+class MarstekConfig:
+    enabled: bool = True
+    udp_port: int = 30000
+    bind_host: str = "0.0.0.0"
+    bind_port: int = 30000
+    request_timeout: float = 2.5
+    discover_timeout: float = 3.5
+    ct_alert_after_seconds: int = 300
+    data_file: str = "/var/lib/mini-pc-monitor/marstek.json"
+    broadcast_hosts: list[str] = field(default_factory=lambda: ["192.168.1.255"])
+    manual_hosts: list[str] = field(default_factory=list)
+
+
+@dataclass
 class SleepScheduleConfig:
     nightly_off_timer: str = "minipc-nightly-off.timer"
     nightly_off_service: str = "minipc-nightly-off.service"
@@ -254,6 +268,7 @@ class Settings:
     clamav: ClamAvConfig = field(default_factory=ClamAvConfig)
     system_updates: SystemUpdatesConfig = field(default_factory=SystemUpdatesConfig)
     video_download: VideoDownloadConfig = field(default_factory=VideoDownloadConfig)
+    marstek: MarstekConfig = field(default_factory=MarstekConfig)
 
 
 def load_settings(path: Path | None = None) -> Settings:
@@ -276,6 +291,7 @@ def load_settings(path: Path | None = None) -> Settings:
     )
     system_updates = SystemUpdatesConfig(**data.get("system_updates", {}))
     video_download = VideoDownloadConfig(**data.get("video_download", {}))
+    marstek = MarstekConfig(**data.get("marstek", {}))
     process_labels = [ProcessLabelRule(**r) for r in data.get("process_labels", [])]
     return Settings(
         server=ServerConfig(**data.get("server", {})),
@@ -294,6 +310,7 @@ def load_settings(path: Path | None = None) -> Settings:
         clamav=clamav,
         system_updates=system_updates,
         video_download=video_download,
+        marstek=marstek,
     )
 
 

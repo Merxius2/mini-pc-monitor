@@ -2678,3 +2678,212 @@
     border-radius: 8px;
     background: var(--surface);
   }
+
+  /* Marstek batteries */
+  .marstek-top-bar p {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 0.85rem;
+    margin: 0.25rem 0 0;
+  }
+
+  #marstekActionResult .action-result {
+    margin: 0 0 1rem;
+    padding: 0.65rem 1.15rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+  }
+
+  .marstek-alert-banner {
+    margin-bottom: 1rem;
+    padding: 0.85rem 1.15rem;
+    border-radius: 10px;
+    border: 1px solid rgba(248, 113, 113, 0.45);
+    background: linear-gradient(135deg, rgba(248, 113, 113, 0.12), rgba(251, 191, 36, 0.08));
+    color: #fecaca;
+    font-size: 0.85rem;
+  }
+
+  .marstek-alert-banner ul {
+    margin: 0.4rem 0 0;
+    padding-left: 1.1rem;
+  }
+
+  .marstek-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    align-items: center;
+    padding: 0 1.15rem 0.75rem;
+  }
+
+  .marstek-manual-ip input {
+    min-width: 9rem;
+    padding: 0.45rem 0.65rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+  }
+
+  .marstek-hint {
+    padding: 0 1.15rem 1rem;
+    max-width: 42rem;
+  }
+
+  .marstek-discover-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0 1.15rem 1.15rem;
+  }
+
+  .marstek-discover-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+  }
+
+  .marstek-device-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+    gap: 1rem;
+    padding: 0 1.15rem 1.15rem;
+  }
+
+  .marstek-card {
+    border-radius: 14px;
+    border: 1px solid rgba(94, 234, 212, 0.25);
+    background: linear-gradient(160deg, rgba(20, 28, 36, 0.95), rgba(15, 20, 28, 0.98));
+    padding: 1.1rem 1.15rem 0.85rem;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  }
+
+  .marstek-card-offline {
+    border-color: rgba(255, 255, 255, 0.12);
+    opacity: 0.85;
+  }
+
+  .marstek-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-bottom: 0.85rem;
+  }
+
+  .marstek-card-head h3 {
+    margin: 0;
+    font-size: 1.05rem;
+  }
+
+  .marstek-pill {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.25rem 0.55rem;
+    border-radius: 999px;
+  }
+
+  .marstek-pill.online {
+    background: rgba(94, 234, 212, 0.15);
+    color: #5eead4;
+  }
+
+  .marstek-pill.offline {
+    background: rgba(248, 113, 113, 0.15);
+    color: #f87171;
+  }
+
+  .marstek-soc-ring {
+    --soc: 50;
+    position: relative;
+    margin: 0 auto 1rem;
+    width: 7.5rem;
+    height: 7.5rem;
+    border-radius: 50%;
+    background: conic-gradient(
+      #5eead4 0 calc(var(--soc) * 1%),
+      rgba(255, 255, 255, 0.08) calc(var(--soc) * 1%) 100%
+    );
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .marstek-soc-ring::before {
+    content: "";
+    position: absolute;
+    inset: 0.55rem;
+    border-radius: 50%;
+    background: var(--surface);
+  }
+
+  .marstek-soc-value,
+  .marstek-soc-label {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+  }
+
+  .marstek-soc-value {
+    font-size: 1.65rem;
+    font-weight: 700;
+    line-height: 1.1;
+  }
+
+  .marstek-soc-value span {
+    font-size: 0.9rem;
+    font-weight: 500;
+    opacity: 0.7;
+  }
+
+  .marstek-soc-label {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: rgba(255, 255, 255, 0.45);
+    margin-top: 0.15rem;
+  }
+
+  .marstek-stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.65rem 1rem;
+    margin: 0;
+    font-size: 0.8rem;
+  }
+
+  .marstek-stat-grid dt {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .marstek-stat-grid dd {
+    margin: 0.15rem 0 0;
+    font-weight: 500;
+  }
+
+  .marstek-ct-ok {
+    color: #5eead4;
+  }
+
+  .marstek-ct-bad {
+    color: #f87171;
+  }
+
+  .marstek-card-error {
+    color: var(--amber);
+    font-size: 0.8rem;
+    margin: 0 0 0.75rem;
+  }

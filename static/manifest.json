@@ -1,0 +1,9 @@
+{
+  "name": "Mini-PC Monitor",
+  "short_name": "Mini-PC",
+  "display": "standalone",
+  "background_color": "#141922",
+  "theme_color": "#141922",
+  "start_url": "/",
+  "icons": []
+}

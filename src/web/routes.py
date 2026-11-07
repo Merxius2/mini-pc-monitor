@@ -12,6 +12,7 @@ from src.azerothcore import get_azerothcore_status
 from src.clamav import get_clamav_scan_progress, get_clamav_status, start_clamav_scan
 from src.clamav_schedule import apply_clamav_schedule, set_clamav_schedule_enabled
 from src.domoticz import get_domoticz_status
+from src.marstek import discover_marstek_devices, get_marstek_dashboard, get_store
 from src.homeassistant import get_homeassistant_status
 from src.qr import qr_png_bytes
 from src.samba import (
@@ -74,9 +75,12 @@ def _layout_context(settings) -> dict:
 
 def _nav_context(settings) -> dict:
     vd = settings.video_download
-    if not vd.enabled:
-        return {"video_download_enabled": False, "video_download_url": ""}
-    return {"video_download_enabled": True, "video_download_url": "/video-download"}
+    ctx = {
+        "video_download_enabled": bool(vd.enabled),
+        "video_download_url": "/video-download" if vd.enabled else "",
+        "marstek_enabled": bool(settings.marstek.enabled),
+    }
+    return ctx
 
 
 def _processes_context(settings) -> dict[str, Any]:
@@ -189,6 +193,115 @@ def storage_overview_partial(request: Request):
         "partials/storage_overview.html",
         _storage_context(settings),
     )
+
+
+def _marstek_context(settings) -> dict:
+    return {"marstek": get_marstek_dashboard(settings.marstek)}
+
+
+@router.get("/batteries", response_class=HTMLResponse)
+def batteries_page(request: Request):
+    settings = _settings(request)
+    if not settings.marstek.enabled:
+        raise HTTPException(status_code=404, detail="Marstek disabled")
+    marstek_ctx = _marstek_context(settings)
+    ctx = {
+        "page_title": "Marstek batteries",
+        "active_nav": "batteries",
+        "status": _layout_context(settings),
+        **_nav_context(settings),
+        **marstek_ctx,
+    }
+    return _templates(request).TemplateResponse(request, "batteries.html", ctx)
+
+
+@router.get("/partials/marstek-overview", response_class=HTMLResponse)
+def marstek_overview_partial(request: Request):
+    settings = _settings(request)
+    if not settings.marstek.enabled:
+        raise HTTPException(status_code=404, detail="Marstek disabled")
+    data = get_marstek_dashboard(settings.marstek)
+    headers: dict[str, str] = {}
+    if data.get("has_ct_alerts"):
+        headers["HX-Trigger"] = "marstekCtAlert"
+    return _templates(request).TemplateResponse(
+        request,
+        "partials/marstek_overview.html",
+        {"marstek": data},
+        headers=headers,
+    )
+
+
+def _marstek_action_response(request: Request, ok: bool, message: str):
+    if request.headers.get("HX-Request"):
+        return _templates(request).TemplateResponse(
+            request,
+            "partials/action_result.html",
+            {"ok": ok, "message": message},
+            headers={"HX-Trigger": "refreshMarstek"},
+        )
+    if not ok:
+        raise HTTPException(status_code=400, detail=message)
+    return RedirectResponse("/batteries", status_code=303)
+
+
+@router.post("/actions/marstek-discover")
+def action_marstek_discover(request: Request):
+    settings = _settings(request)
+    if not settings.marstek.enabled:
+        raise HTTPException(status_code=404, detail="Marstek disabled")
+    discovered = discover_marstek_devices(settings.marstek)
+    store = get_store(settings.marstek)
+    store.set_discovered(discovered)
+    msg = f"Found {len(discovered)} Marstek device(s) on the LAN"
+    if not discovered:
+        msg = "No Marstek devices replied (check Local API in the Marstek app and UDP port 30000)"
+    return _marstek_action_response(request, True, msg)
+
+
+@router.post("/actions/marstek-select")
+def action_marstek_select(
+    request: Request,
+    device_id: str = Form(...),
+    ip: str = Form(default=""),
+    src: str = Form(default=""),
+    device: str = Form(default=""),
+    selected: str = Form(...),
+):
+    settings = _settings(request)
+    if not settings.marstek.enabled:
+        raise HTTPException(status_code=404, detail="Marstek disabled")
+    store = get_store(settings.marstek)
+    row = {
+        "id": device_id,
+        "ip": ip.strip(),
+        "src": src.strip(),
+        "device": device.strip(),
+        "label": src.strip() or ip.strip() or device_id,
+    }
+    store.toggle_selected(row, on=selected.strip().lower() in ("1", "true", "on", "yes"))
+    state = "monitoring" if selected.strip().lower() in ("1", "true", "on", "yes") else "hidden"
+    return _marstek_action_response(request, True, f"Device {state}: {row.get('label')}")
+
+
+@router.post("/actions/marstek-add-manual")
+def action_marstek_add_manual(request: Request, ip: str = Form(...)):
+    settings = _settings(request)
+    if not settings.marstek.enabled:
+        raise HTTPException(status_code=404, detail="Marstek disabled")
+    host = ip.strip()
+    if not host:
+        return _marstek_action_response(request, False, "Enter an IP address")
+    from src.marstek import marstek_rpc, _device_from_message
+
+    message = marstek_rpc(settings.marstek, host, "Marstek.GetDevice", params={"ble_mac": "0"}, req_id=77)
+    device = _device_from_message(message, fallback_ip=host)
+    if not device:
+        return _marstek_action_response(request, False, f"No reply from {host} on UDP {settings.marstek.udp_port}")
+    store = get_store(settings.marstek)
+    store.set_discovered([device])
+    store.toggle_selected({**device, "ip": device.get("ip") or host}, on=True)
+    return _marstek_action_response(request, True, f"Added {device.get('src') or host}")
 
 
 @router.get("/torrents", response_class=HTMLResponse)

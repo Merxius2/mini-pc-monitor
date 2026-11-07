@@ -1,0 +1,64 @@
+{% set d = dev.display %}
+{% set label = namespace(name=dev.ip) %}
+{% for s in marstek.selected %}{% if s.ip == dev.ip %}{% set label.name = s.label or s.src or dev.ip %}{% endif %}{% endfor %}
+<article class="marstek-card {% if not dev.online %}marstek-card-offline{% endif %}">
+  <header class="marstek-card-head">
+    <div>
+      <h3>{{ label.name }}</h3>
+      <p class="detail mono">{{ dev.src or dev.device or dev.ip }}</p>
+    </div>
+    <span class="marstek-pill {% if dev.online %}online{% else %}offline{% endif %}">
+      {{ "Online" if dev.online else "Offline" }}
+    </span>
+  </header>
+
+  {% if dev.error and not dev.online %}
+  <p class="marstek-card-error">{{ dev.error }}</p>
+  {% endif %}
+
+  <div class="marstek-soc-ring" style="--soc: {{ d.soc or 0 }};">
+    <div class="marstek-soc-value">{{ d.soc if d.soc is not none else "—" }}<span>%</span></div>
+    <div class="marstek-soc-label">State of charge</div>
+  </div>
+
+  <dl class="marstek-stat-grid">
+    <div>
+      <dt>Mode</dt>
+      <dd>{{ d.mode or "—" }}</dd>
+    </div>
+    <div>
+      <dt>Battery power</dt>
+      <dd>{% if d.bat_power is not none %}{{ d.bat_power }} W{% else %}—{% endif %}</dd>
+    </div>
+    <div>
+      <dt>PV power</dt>
+      <dd>{% if d.pv_power is not none %}{{ d.pv_power }} W{% else %}—{% endif %}</dd>
+    </div>
+    <div>
+      <dt>Grid</dt>
+      <dd>{% if d.ongrid_power is not none %}{{ d.ongrid_power }} W{% else %}—{% endif %}</dd>
+    </div>
+    <div>
+      <dt>Capacity</dt>
+      <dd>
+        {% if d.bat_capacity_wh is not none %}{{ d.bat_capacity_wh|round(0) }}{% else %}—{% endif %}
+        / {% if d.rated_capacity_wh is not none %}{{ d.rated_capacity_wh|round(0) }}{% else %}—{% endif %} Wh
+      </dd>
+    </div>
+    <div>
+      <dt>Temperature</dt>
+      <dd>{% if d.bat_temp is not none %}{{ d.bat_temp }} °C{% else %}—{% endif %}</dd>
+    </div>
+    <div>
+      <dt>CT clamp</dt>
+      <dd class="{% if d.ct_connected %}marstek-ct-ok{% elif d.ct_state == 0 %}marstek-ct-bad{% endif %}">
+        {% if d.ct_state == 1 %}Connected{% elif d.ct_state == 0 %}Lost{% else %}—{% endif %}
+      </dd>
+    </div>
+    <div>
+      <dt>Wi‑Fi</dt>
+      <dd>{% if d.ssid %}{{ d.ssid }}{% if d.wifi_rssi is not none %} · {{ d.wifi_rssi }} dBm{% endif %}{% else %}—{% endif %}</dd>
+    </div>
+  </dl>
+  <footer class="detail mono">Updated {{ dev.polled_at }}</footer>
+</article>

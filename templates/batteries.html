@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block head %}
+<link rel="manifest" href="/static/manifest.json" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+{% endblock %}
+{% block main %}
+<div class="top-bar marstek-top-bar">
+  <div>
+    <h2>Marstek Venus</h2>
+    <p>Local UDP API · port {{ marstek.config.udp_port if marstek.enabled else 30000 }} · {{ status.hostname }}</p>
+  </div>
+</div>
+
+<div id="marstekActionResult"></div>
+
+<div id="marstekPanel"
+     hx-get="/partials/marstek-overview"
+     hx-trigger="load, every 12s, refreshMarstek from:body"
+     hx-swap="innerHTML">
+  {% include "partials/marstek_overview.html" %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    if (!("Notification" in window)) return;
+    if (Notification.permission === "default") {
+      Notification.requestPermission().catch(function () {});
+    }
+    document.body.addEventListener("marstekCtAlert", function () {
+      var banner = document.getElementById("marstekCtAlertBanner");
+      if (!banner || banner.dataset.notified === "1") return;
+      var text = banner.getAttribute("data-alert-text") || "CT link lost";
+      if (Notification.permission === "granted") {
+        try {
+          new Notification("Marstek — CT link", { body: text, tag: "marstek-ct" });
+          banner.dataset.notified = "1";
+        } catch (e) {}
+      }
+    });
+    document.body.addEventListener("htmx:afterSwap", function (e) {
+      if (e.detail.target && e.detail.target.id === "marstekPanel") {
+        var banner = document.getElementById("marstekCtAlertBanner");
+        if (!banner) {
+          var old = document.querySelector("#marstekPanel [data-alert-text]");
+          if (old) old.dataset.notified = "";
+        }
+      }
+    });
+  })();
+</script>
+{% endblock %}

@@ -1,0 +1,81 @@
+{% set m = marstek %}
+{% if m.has_ct_alerts %}
+<div class="marstek-alert-banner" id="marstekCtAlertBanner"
+     data-alert-text="{% for a in m.alerts %}{{ a.message }}{% if not loop.last %} · {% endif %}{% endfor %}">
+  <strong>CT link lost</strong>
+  <ul>
+    {% for a in m.alerts %}
+    <li>{{ a.message }} <span class="mono">({{ a.ip }})</span></li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<section class="panel marstek-section">
+  <div class="panel-header">
+    Discover &amp; select
+    <span class="tag would_hold">UDP {{ m.config.udp_port }}</span>
+  </div>
+  <div class="marstek-toolbar">
+    <form class="inline-form"
+          hx-post="/actions/marstek-discover"
+          hx-target="#marstekActionResult"
+          hx-swap="innerHTML">
+      <button type="submit" class="btn btn-primary">Scan LAN</button>
+    </form>
+    <form class="inline-form marstek-manual-ip"
+          hx-post="/actions/marstek-add-manual"
+          hx-target="#marstekActionResult"
+          hx-swap="innerHTML">
+      <input name="ip" type="text" inputmode="decimal" placeholder="192.168.1.x" required class="mono" />
+      <button type="submit" class="btn btn-sm">Add by IP</button>
+    </form>
+  </div>
+  <p class="detail marstek-hint">Enable <strong>Local API</strong> in the Marstek app. Devices reply on UDP port 30000; this dashboard binds local port {{ m.config.bind_port }} for replies.</p>
+
+  {% if m.discovered %}
+  <div class="marstek-discover-grid">
+    {% for d in m.discovered %}
+    {% set dev_id = d.id or d.ip %}
+    {% set is_selected = dev_id in m.selected_ids %}
+    <div class="marstek-discover-card">
+      <div>
+        <strong class="mono">{{ d.src or d.device or "Marstek" }}</strong>
+        <p class="detail">{{ d.ip }}{% if d.wifi_name %} · {{ d.wifi_name }}{% endif %}</p>
+      </div>
+      <form hx-post="/actions/marstek-select"
+            hx-target="#marstekActionResult"
+            hx-swap="innerHTML">
+        <input type="hidden" name="device_id" value="{{ dev_id }}" />
+        <input type="hidden" name="ip" value="{{ d.ip or '' }}" />
+        <input type="hidden" name="src" value="{{ d.src or '' }}" />
+        <input type="hidden" name="device" value="{{ d.device or '' }}" />
+        <input type="hidden" name="selected" value="{{ 'false' if is_selected else 'true' }}" />
+        <button type="submit" class="btn btn-sm {% if is_selected %}btn-danger{% else %}btn-primary{% endif %}">
+          {% if is_selected %}Stop monitoring{% else %}Monitor{% endif %}
+        </button>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="action-log-empty">No devices in cache — run <strong>Scan LAN</strong> or add a known IP.</p>
+  {% endif %}
+</section>
+
+<section class="panel marstek-section">
+  <div class="panel-header">
+    Monitored batteries
+    <span class="tag {% if m.selected %}would_hold{% else %}would_wait{% endif %}">{{ m.selected|length }} selected</span>
+  </div>
+
+  {% if not m.selected %}
+  <p class="action-log-empty">Select one or more batteries above to see live stats.</p>
+  {% else %}
+  <div class="marstek-device-grid">
+    {% for dev in m.devices %}
+    {% include "partials/marstek_device_card.html" %}
+    {% endfor %}
+  </div>
+  {% endif %}
+</section>

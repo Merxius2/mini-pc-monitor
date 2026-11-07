@@ -178,6 +178,16 @@ azerothcore:
   auth_tmux_session: auth-session
   world_tmux_session: world-session
 
+marstek:
+  enabled: true
+  udp_port: 30000
+  bind_port: 30000
+  broadcast_hosts:
+    - 192.168.1.255
+    - 255.255.255.255
+  ct_alert_after_seconds: 300
+  data_file: /var/lib/mini-pc-monitor/marstek.json
+
 sleep_schedule:
   nightly_off_timer: minipc-nightly-off.timer
   nightly_off_service: minipc-nightly-off.service
