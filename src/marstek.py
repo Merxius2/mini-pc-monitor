@@ -171,16 +171,30 @@ class MarstekStore:
 
     def load(self) -> None:
         if not self.path.is_file():
-            self._data = {"selected": [], "discovered": [], "ct_lost_since": {}, "client": {}}
+            self._data = {
+                "selected": [],
+                "discovered": [],
+                "ct_lost_since": {},
+                "client": {},
+                "polling_enabled": True,
+            }
             return
         try:
             self._data = json.loads(self.path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
-            self._data = {"selected": [], "discovered": [], "ct_lost_since": {}, "client": {}}
+            self._data = {
+                "selected": [],
+                "discovered": [],
+                "ct_lost_since": {},
+                "client": {},
+                "polling_enabled": True,
+            }
         self._data.setdefault("selected", [])
         self._data.setdefault("discovered", [])
         self._data.setdefault("ct_lost_since", {})
         self._data.setdefault("client", {})
+        if "polling_enabled" not in self._data:
+            self._data["polling_enabled"] = True
         selected = self._normalize_rows(list(self._data.get("selected") or []))
         discovered = self._normalize_rows(list(self._data.get("discovered") or []))
         if selected != self._data.get("selected") or discovered != self._data.get("discovered"):
@@ -264,6 +278,13 @@ class MarstekStore:
         if udp_port is not None:
             client["udp_port"] = int(udp_port)
         self._data["client"] = client
+        self.save()
+
+    def polling_enabled(self) -> bool:
+        return bool(self._data.get("polling_enabled", True))
+
+    def set_polling_enabled(self, enabled: bool) -> None:
+        self._data["polling_enabled"] = bool(enabled)
         self.save()
 
 
@@ -693,6 +714,9 @@ def _poller_loop(config: MarstekConfig) -> None:
     while True:
         cfg = with_store_overrides(config)
         store = get_store(config)
+        if not store.polling_enabled():
+            time.sleep(5.0)
+            continue
         ips = [normalize_ip(row["ip"]) for row in store.selected if row.get("ip")]
         if not ips:
             time.sleep(5.0)
@@ -773,6 +797,16 @@ def update_ct_alerts(
 def get_marstek_summary(config: MarstekConfig) -> dict[str, Any]:
     if not config.enabled:
         return {"enabled": False, "devices": [], "count": 0}
+    store = get_store(config)
+    if not store.polling_enabled():
+        return {
+            "enabled": True,
+            "polling_enabled": False,
+            "devices": [],
+            "count": 0,
+            "has_ct_alerts": False,
+            "paused": True,
+        }
     dash = get_marstek_dashboard(config)
     store = get_store(config)
     rows: list[dict[str, Any]] = []
@@ -793,9 +827,11 @@ def get_marstek_summary(config: MarstekConfig) -> dict[str, Any]:
         )
     return {
         "enabled": True,
+        "polling_enabled": True,
         "devices": rows,
         "count": len(rows),
         "has_ct_alerts": dash.get("has_ct_alerts"),
+        "paused": False,
     }
 
 
@@ -803,12 +839,28 @@ def get_marstek_dashboard(config: MarstekConfig) -> dict[str, Any]:
     if not config.enabled:
         return {"enabled": False}
     cfg = with_store_overrides(config)
-    _ensure_poller(config)
     store = get_store(config)
+    polling_on = store.polling_enabled()
+    if polling_on:
+        _ensure_poller(config)
     statuses: list[dict[str, Any]] = []
     for row in store.selected:
         ip = normalize_ip(row.get("ip") or "")
         if not ip:
+            continue
+        if not polling_on:
+            statuses.append(
+                {
+                    "ip": ip,
+                    "online": False,
+                    "polled_at": _utc_now_iso(),
+                    "methods": {},
+                    "display": empty_display(),
+                    "error": "monitoring paused — no UDP traffic",
+                    "src": row.get("src"),
+                    "device": row.get("device"),
+                }
+            )
             continue
         cached = _cached_status(ip)
         if cached is not None:
@@ -826,9 +878,10 @@ def get_marstek_dashboard(config: MarstekConfig) -> dict[str, Any]:
                 "device": row.get("device"),
             }
         )
-    alerts = update_ct_alerts(config, store, statuses)
+    alerts = update_ct_alerts(config, store, statuses) if polling_on else []
     return {
         "enabled": True,
+        "polling_enabled": polling_on,
         "config": cfg,
         "selected": store.selected,
         "selected_ids": {str(s.get("id") or "") for s in store.selected if s.get("id")},

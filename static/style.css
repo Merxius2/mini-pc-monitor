@@ -3084,3 +3084,26 @@
   .marstek-home-offline {
     opacity: 0.75;
   }
+
+  .marstek-service-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0 1.15rem 1.15rem;
+  }
+
+  .marstek-service-row .marstek-hint {
+    flex: 1 1 14rem;
+    margin: 0;
+    padding: 0;
+  }
+
+  .marstek-service-off {
+    border-color: rgba(251, 191, 36, 0.35);
+  }
+
+  .marstek-home-paused .detail {
+    color: rgba(255, 255, 255, 0.55);
+  }

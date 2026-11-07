@@ -94,6 +94,15 @@ class DeviceFromMessageTests(unittest.TestCase):
 
 
 class MarstekStoreTests(unittest.TestCase):
+    def test_polling_toggle_persists(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "marstek.json"
+            store = MarstekStore(path)
+            self.assertTrue(store.polling_enabled())
+            store.set_polling_enabled(False)
+            store = MarstekStore(path)
+            self.assertFalse(store.polling_enabled())
+
     def test_toggle_selected_persists(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "marstek.json"

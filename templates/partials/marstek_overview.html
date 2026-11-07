@@ -1,4 +1,30 @@
 {% set m = marstek %}
+<section class="panel marstek-section marstek-service-panel {% if not m.polling_enabled %}marstek-service-off{% endif %}">
+  <div class="panel-header">
+    Background monitoring
+    <span class="tag {% if m.polling_enabled %}would_hold{% else %}would_wait{% endif %}">
+      {{ "On" if m.polling_enabled else "Off" }}
+    </span>
+  </div>
+  <div class="marstek-service-row">
+    <p class="detail marstek-hint">
+      {% if m.polling_enabled %}
+      The mini-PC is polling selected batteries over UDP. Turn off to stop all automatic API traffic (e.g. if units reset).
+      {% else %}
+      Monitoring is <strong>off</strong> — no background UDP. Turn on to resume live stats. One-off <strong>Scan LAN</strong> still works.
+      {% endif %}
+    </p>
+    <form hx-post="/actions/marstek-toggle-polling"
+          hx-target="#marstekActionResult"
+          hx-swap="innerHTML">
+      <input type="hidden" name="enabled" value="{{ 'false' if m.polling_enabled else 'true' }}" />
+      <button type="submit" class="btn {% if m.polling_enabled %}btn-danger{% else %}btn-primary{% endif %}">
+        {{ "Turn monitoring off" if m.polling_enabled else "Turn monitoring on" }}
+      </button>
+    </form>
+  </div>
+</section>
+
 {% if m.has_ct_alerts %}
 <div class="marstek-alert-banner" id="marstekCtAlertBanner"
      data-alert-text="{% for a in m.alerts %}{{ a.message }}{% if not loop.last %} · {% endif %}{% endfor %}">

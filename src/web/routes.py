@@ -215,6 +215,12 @@ def marstek_summary_partial(request: Request):
     if not settings.marstek.enabled:
         return HTMLResponse("")
     summary = get_marstek_summary(settings.marstek)
+    if summary.get("paused"):
+        return _templates(request).TemplateResponse(
+            request,
+            "partials/marstek_summary.html",
+            {"marstek_summary": summary, "marstek_refresh_seconds": refresh},
+        )
     if not summary.get("devices"):
         return HTMLResponse("")
     refresh = max(5, int(settings.marstek.ui_refresh_seconds))
@@ -308,6 +314,23 @@ def action_marstek_select(
     store.toggle_selected(row, on=selected.strip().lower() in ("1", "true", "on", "yes"))
     state = "monitoring" if selected.strip().lower() in ("1", "true", "on", "yes") else "hidden"
     return _marstek_action_response(request, True, f"Device {state}: {row.get('label')}")
+
+
+@router.post("/actions/marstek-toggle-polling")
+def action_marstek_toggle_polling(request: Request, enabled: str = Form(...)):
+    settings = _settings(request)
+    if not settings.marstek.enabled:
+        raise HTTPException(status_code=404, detail="Marstek disabled")
+    on = enabled.strip().lower() in ("1", "true", "on", "yes")
+    store = get_store(settings.marstek)
+    store.set_polling_enabled(on)
+    state = "on" if on else "off"
+    msg = (
+        "Background monitoring enabled — UDP polling resumed"
+        if on
+        else "Background monitoring off — no automatic UDP traffic to batteries"
+    )
+    return _marstek_action_response(request, True, msg)
 
 
 @router.post("/actions/marstek-rename")
