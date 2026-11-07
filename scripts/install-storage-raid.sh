@@ -21,14 +21,32 @@ sudo cp "$ROOT/scripts/minipc-storage.service" /etc/systemd/system/minipc-storag
 sudo cp "$ROOT/scripts/minipc-storage-sleep" /usr/lib/systemd/system-sleep/minipc-storage
 sudo chmod 755 /usr/lib/systemd/system-sleep/minipc-storage
 
-# nofail so unplugged USB RAID does not block multi-user boot (minipc-storage still assembles when present).
-if grep -q '/mnt/storage' /etc/fstab && ! grep '/mnt/storage' /etc/fstab | grep -q nofail; then
-  sudo sed -i 's|\(/mnt/storage[[:space:]]\+[^[:space:]]\+[[:space:]]\+\)\([^[:space:]]*\)|\1\2,nofail,x-systemd.device-timeout=30|' /etc/fstab
+# Storage is mounted by minipc-storage after multi-user boot — not during local-fs.
+if grep -q '/mnt/storage' /etc/fstab; then
+  if ! grep '/mnt/storage' /etc/fstab | grep -q noauto; then
+    sudo sed -i 's|\(/mnt/storage[[:space:]]\+[^[:space:]]\+[[:space:]]\+\)\([^[:space:]]*\)|\1noauto,\2|' /etc/fstab
+  fi
+  if ! grep '/mnt/storage' /etc/fstab | grep -q nofail; then
+    sudo sed -i 's|\(/mnt/storage[[:space:]]\+[^[:space:]]\+[[:space:]]\+\)\([^[:space:]]*\)|\1\2,nofail,x-systemd.device-timeout=30|' /etc/fstab
+  fi
 fi
+
+for unit in smbd.service transmission-daemon.service; do
+  dropin="/etc/systemd/system/${unit}.d"
+  sudo mkdir -p "$dropin"
+  case "$unit" in
+    smbd.service)
+      sudo cp "$ROOT/scripts/minipc-smbd-after-storage.conf" "$dropin/minipc-after-storage.conf"
+      ;;
+    transmission-daemon.service)
+      sudo cp "$ROOT/scripts/minipc-transmission-after-storage.conf" "$dropin/minipc-after-storage.conf"
+      ;;
+  esac
+done
 
 sudo systemctl daemon-reload
 sudo systemctl enable minipc-storage.service
 
 sudo update-initramfs -u
 
-echo "Enabled minipc-storage.service (boot) and systemd sleep hook (resume)."
+echo "Enabled minipc-storage.service (after multi-user boot) and systemd sleep hook (resume)."
