@@ -44,6 +44,7 @@ from src.services import (
     stop_service,
 )
 from src.sleep_schedule import apply_schedule, get_schedule_status, set_schedule_enabled, suspend_now
+from src.service_state import snapshot_managed
 from src.system_updates import (
     apply_full_system_updates,
     apply_system_updates,
@@ -676,21 +677,24 @@ def _assert_manageable_unit(request: Request, unit: str) -> None:
 @router.post("/actions/start-service")
 def action_start_service(request: Request, unit: str = Form(...)):
     _assert_manageable_unit(request, unit)
-    ok, message = start_service(unit)
+    settings = _settings(request)
+    ok, message = start_service(unit, state=settings.service_state)
     return _service_action_response(request, unit, ok, message)
 
 
 @router.post("/actions/stop-service")
 def action_stop_service(request: Request, unit: str = Form(...)):
     _assert_manageable_unit(request, unit)
-    ok, message = stop_service(unit)
+    settings = _settings(request)
+    ok, message = stop_service(unit, state=settings.service_state)
     return _service_action_response(request, unit, ok, message)
 
 
 @router.post("/actions/restart-service")
 def action_restart_service(request: Request, unit: str = Form(...)):
     _assert_manageable_unit(request, unit)
-    ok, message = restart_service(unit)
+    settings = _settings(request)
+    ok, message = restart_service(unit, state=settings.service_state)
     return _service_action_response(request, unit, ok, message)
 
 
@@ -796,6 +800,7 @@ def action_system_updates_reboot(request: Request):
     settings = _settings(request)
     if not settings.system_updates.enabled:
         raise HTTPException(status_code=404, detail="System updates disabled")
+    snapshot_managed(settings)
     ok, message, _ = reboot_system(settings.system_updates)
     return _management_updates_action_response(request, ok, message)
 

@@ -53,6 +53,12 @@ services:
     manage: true
     logs: true
 
+# Remember start/stop from the Services page (and snapshot before Reboot now).
+service_state:
+  enabled: true
+  state_file: /var/lib/mini-pc-monitor/service-desired-state.json
+  restore_on_boot: true
+
 top_processes_limit: 8
 
 process_labels:

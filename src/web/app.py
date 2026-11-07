@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from src.config_loader import load_settings
+from src.service_state import load_state, snapshot_managed
 from src.web.routes import router
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -28,6 +29,15 @@ def create_app() -> FastAPI:
     if static_dir.is_dir():
         app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
     app.include_router(router)
+
+    @app.on_event("startup")
+    def _seed_service_state_baseline() -> None:
+        if not settings.service_state.enabled:
+            return
+        state = load_state(settings.service_state)
+        if not state.get("units"):
+            snapshot_managed(settings)
+
     return app
 
 

@@ -250,6 +250,23 @@ class MarstekConfig:
 
 
 @dataclass
+class ServiceStateConfig:
+    enabled: bool = True
+    state_file: str = "/var/lib/mini-pc-monitor/service-desired-state.json"
+    restore_on_boot: bool = True
+    protect_units: list[str] = field(
+        default_factory=lambda: ["mini-pc-monitor.service", "minipc-restore-services.service"]
+    )
+    storage_dependent_units: list[str] = field(
+        default_factory=lambda: [
+            "smbd.service",
+            "nmbd.service",
+            "transmission-daemon.service",
+        ]
+    )
+
+
+@dataclass
 class SleepScheduleConfig:
     nightly_off_timer: str = "minipc-nightly-off.timer"
     nightly_off_service: str = "minipc-nightly-off.service"
@@ -278,6 +295,7 @@ class Settings:
     system_updates: SystemUpdatesConfig = field(default_factory=SystemUpdatesConfig)
     video_download: VideoDownloadConfig = field(default_factory=VideoDownloadConfig)
     marstek: MarstekConfig = field(default_factory=MarstekConfig)
+    service_state: ServiceStateConfig = field(default_factory=ServiceStateConfig)
 
 
 def load_settings(path: Path | None = None) -> Settings:
@@ -301,6 +319,7 @@ def load_settings(path: Path | None = None) -> Settings:
     system_updates = SystemUpdatesConfig(**data.get("system_updates", {}))
     video_download = VideoDownloadConfig(**data.get("video_download", {}))
     marstek = MarstekConfig(**data.get("marstek", {}))
+    service_state = ServiceStateConfig(**data.get("service_state", {}))
     process_labels = [ProcessLabelRule(**r) for r in data.get("process_labels", [])]
     return Settings(
         server=ServerConfig(**data.get("server", {})),
@@ -320,6 +339,7 @@ def load_settings(path: Path | None = None) -> Settings:
         system_updates=system_updates,
         video_download=video_download,
         marstek=marstek,
+        service_state=service_state,
     )
 
 

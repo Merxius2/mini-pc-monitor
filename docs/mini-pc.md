@@ -36,6 +36,8 @@ bash scripts/install-system-updates.sh
 
 Re-run that script after pulling if the helper gains new actions (e.g. **Reboot now** on management when `reboot-required` is set).
 
+Service start/stop from the **Services** page is saved to `/var/lib/mini-pc-monitor/service-desired-state.json` and restored after reboot (`bash scripts/install-service-state.sh` once). **Reboot now** snapshots all manageable units before reboot.
+
 ## Commands
 
 ```bash

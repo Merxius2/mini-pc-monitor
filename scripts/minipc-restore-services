@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Apply service states saved by the Mini-PC Monitor dashboard (runs as root at boot).
+set -euo pipefail
+
+ROOT="/home/sylvester/mini-pc-monitor"
+PY="$ROOT/.venv/bin/python3"
+if [ ! -x "$PY" ]; then
+  PY=python3
+fi
+
+exec "$PY" - <<'PY'
+import sys
+from pathlib import Path
+
+sys.path.insert(0, "/home/sylvester/mini-pc-monitor")
+
+from src.config_loader import load_settings
+from src.service_state import restore_saved_state
+
+settings = load_settings()
+started, stopped = restore_saved_state(settings)
+if started or stopped:
+    print(f"minipc-restore-services: started={started} stopped={stopped}")
+PY

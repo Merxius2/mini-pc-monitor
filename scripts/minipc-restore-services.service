@@ -1,0 +1,13 @@
+[Unit]
+Description=Restore dashboard-managed service states after boot
+After=minipc-storage.service mini-pc-monitor.service
+Wants=minipc-storage.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+TimeoutStartSec=120
+ExecStart=/usr/local/sbin/minipc-restore-services
+
+[Install]
+WantedBy=multi-user.target

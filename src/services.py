@@ -6,7 +6,8 @@ import socket
 import subprocess
 from typing import Any
 
-from src.config_loader import ServiceConfig
+from src.config_loader import ServiceConfig, ServiceStateConfig
+from src.service_state import set_unit_desired
 
 
 def _run(cmd: list[str]) -> subprocess.CompletedProcess[str]:
@@ -135,13 +136,27 @@ def _control_service(unit: str, action: str) -> tuple[bool, str]:
     return False, msg
 
 
-def start_service(unit: str) -> tuple[bool, str]:
-    return _control_service(unit, "start")
+def _record_state(state: ServiceStateConfig | None, unit: str, active: bool) -> None:
+    if state:
+        set_unit_desired(state, unit, active)
 
 
-def stop_service(unit: str) -> tuple[bool, str]:
-    return _control_service(unit, "stop")
+def start_service(unit: str, *, state: ServiceStateConfig | None = None) -> tuple[bool, str]:
+    ok, message = _control_service(unit, "start")
+    if ok:
+        _record_state(state, unit, True)
+    return ok, message
 
 
-def restart_service(unit: str) -> tuple[bool, str]:
-    return _control_service(unit, "restart")
+def stop_service(unit: str, *, state: ServiceStateConfig | None = None) -> tuple[bool, str]:
+    ok, message = _control_service(unit, "stop")
+    if ok:
+        _record_state(state, unit, False)
+    return ok, message
+
+
+def restart_service(unit: str, *, state: ServiceStateConfig | None = None) -> tuple[bool, str]:
+    ok, message = _control_service(unit, "restart")
+    if ok:
+        _record_state(state, unit, True)
+    return ok, message
