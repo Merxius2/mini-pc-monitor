@@ -105,6 +105,25 @@ minipc_storage_stack_start() {
   systemctl start smbd nmbd transmission-daemon 2>/dev/null || true
 }
 
+# Skip quickly when the USB enclosure is unplugged (avoid 45s member wait + hung mount).
+_early_uuid="$(array_uuid 2>/dev/null || true)"
+if [ -n "${_early_uuid:-}" ] && ! [ -b "$MD_DEV" ] && ! mountpoint -q "$MOUNT"; then
+  udevadm settle 2>/dev/null || true
+  mapfile -t _early_members < <(minipc_md_member_by_id "$_early_uuid" 2>/dev/null || true)
+  if [ "${#_early_members[@]}" -eq 0 ]; then
+    for _ in 1 2 3 4 5; do
+      sleep 1
+      udevadm settle 2>/dev/null || true
+      mapfile -t _early_members < <(minipc_md_member_by_id "$_early_uuid" 2>/dev/null || true)
+      [ "${#_early_members[@]}" -gt 0 ] && break
+    done
+  fi
+  if [ "${#_early_members[@]}" -eq 0 ]; then
+    logger -t minipc-ensure-storage "No RAID members on USB; skipping mount (plug in enclosure and run repair from dashboard)"
+    exit 0
+  fi
+fi
+
 assemble_md0
 
 if [ -b "$MD_DEV" ]; then
@@ -134,10 +153,25 @@ if mountpoint -q "$MOUNT"; then
   exit 0
 fi
 
+if ! [ -b "$MD_DEV" ]; then
+  udevadm settle 2>/dev/null || true
+  mapfile -t _members < <(minipc_md_member_by_id "$(array_uuid)" 2>/dev/null || true)
+  if [ "${#_members[@]}" -eq 0 ]; then
+    logger -t minipc-ensure-storage "No RAID members on USB; skipping mount (plug in enclosure and run repair from dashboard)"
+    exit 0
+  fi
+fi
+
+_mount_ok=0
 if grep -q "$FSTAB_UUID" /etc/fstab 2>/dev/null; then
-  mount "$MOUNT"
+  timeout 20 mount "$MOUNT" && _mount_ok=1 || true
 else
-  mount -U "$FSTAB_UUID" "$MOUNT" 2>/dev/null || mount "$MD_DEV" "$MOUNT"
+  timeout 20 mount -U "$FSTAB_UUID" "$MOUNT" 2>/dev/null && _mount_ok=1 \
+    || timeout 20 mount "$MD_DEV" "$MOUNT" 2>/dev/null && _mount_ok=1 || true
+fi
+if [ "$_mount_ok" -ne 1 ]; then
+  logger -t minipc-ensure-storage "Mount $MOUNT failed or timed out; continuing boot"
+  exit 0
 fi
 
 minipc_storage_stack_start

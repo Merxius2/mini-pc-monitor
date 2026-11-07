@@ -8,6 +8,7 @@ Wants=systemd-udev-settle.service
 [Service]
 Type=oneshot
 RemainAfterExit=yes
+TimeoutStartSec=90
 ExecStart=/usr/local/sbin/minipc-ensure-storage.sh
 
 [Install]

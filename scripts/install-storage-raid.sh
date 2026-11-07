@@ -21,10 +21,9 @@ sudo cp "$ROOT/scripts/minipc-storage.service" /etc/systemd/system/minipc-storag
 sudo cp "$ROOT/scripts/minipc-storage-sleep" /usr/lib/systemd/system-sleep/minipc-storage
 sudo chmod 755 /usr/lib/systemd/system-sleep/minipc-storage
 
-# Reliable local mount at boot (not optional/nofail).
-if grep -q '/mnt/storage' /etc/fstab; then
-  sudo sed -i 's|/mnt/storage ext4 defaults,nofail|/mnt/storage ext4 defaults,noatime|' /etc/fstab
-  sudo sed -i 's|/mnt/storage ext4 defaults |/mnt/storage ext4 defaults,noatime |' /etc/fstab
+# nofail so unplugged USB RAID does not block multi-user boot (minipc-storage still assembles when present).
+if grep -q '/mnt/storage' /etc/fstab && ! grep '/mnt/storage' /etc/fstab | grep -q nofail; then
+  sudo sed -i 's|\(/mnt/storage[[:space:]]\+[^[:space:]]\+[[:space:]]\+\)\([^[:space:]]*\)|\1\2,nofail,x-systemd.device-timeout=30|' /etc/fstab
 fi
 
 sudo systemctl daemon-reload
