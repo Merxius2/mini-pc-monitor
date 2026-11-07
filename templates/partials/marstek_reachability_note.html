@@ -1,0 +1,20 @@
+{% if dev.status_hint == 'no_udp_reply' %}
+<div class="marstek-reachability-note" role="note">
+  <strong>Local API / unreachable</strong>
+  <p>{{ dev.status_note }}</p>
+</div>
+{% elif dev.status_hint == 'paused' %}
+<div class="marstek-reachability-note marstek-reachability-muted" role="note">
+  <p>{{ dev.status_note }}</p>
+</div>
+{% elif dev.status_hint == 'pending' %}
+<div class="marstek-reachability-note marstek-reachability-muted" role="note">
+  <p>{{ dev.status_note }}</p>
+</div>
+{% elif dev.status_hint == 'error' and dev.status_note %}
+<div class="marstek-reachability-note" role="note">
+  <p>{{ dev.status_note }}</p>
+</div>
+{% elif dev.error and not dev.online and dev.status_hint not in ('no_udp_reply', 'paused', 'pending') %}
+<p class="marstek-card-error">{{ dev.error }}</p>
+{% endif %}

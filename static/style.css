@@ -3107,3 +3107,33 @@
   .marstek-home-paused .detail {
     color: rgba(255, 255, 255, 0.55);
   }
+
+  .marstek-reachability-note {
+    margin: 0 0 0.85rem;
+    padding: 0.7rem 0.85rem;
+    border-radius: 8px;
+    border: 1px solid rgba(251, 191, 36, 0.4);
+    background: rgba(251, 191, 36, 0.08);
+    font-size: 0.8rem;
+    line-height: 1.45;
+  }
+
+  .marstek-reachability-note strong {
+    display: block;
+    margin-bottom: 0.25rem;
+    color: #fbbf24;
+  }
+
+  .marstek-reachability-note p {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.75);
+  }
+
+  .marstek-reachability-muted {
+    border-color: var(--border);
+    background: var(--surface2);
+  }
+
+  .marstek-summary-warn {
+    color: #fbbf24;
+  }

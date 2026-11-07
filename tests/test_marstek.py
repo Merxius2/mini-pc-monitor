@@ -9,6 +9,8 @@ from src.marstek import (
     _build_display,
     _device_from_message,
     _power_flow,
+    _reachability_hint,
+    apply_reachability_hints,
     format_mode_label,
     marstek_rpc,
     normalize_ip,
@@ -53,6 +55,20 @@ class PowerFlowTests(unittest.TestCase):
 class ModeLabelTests(unittest.TestCase):
     def test_auto_is_self_consumption(self) -> None:
         self.assertEqual(format_mode_label("Auto"), "Self-consumption")
+
+
+class ReachabilityHintTests(unittest.TestCase):
+    def test_timeout_suggests_local_api(self) -> None:
+        hint, note = _reachability_hint(
+            {"online": False, "methods": {}, "errors": {"Marstek.GetDevice": "timeout"}},
+            polling_enabled=True,
+        )
+        self.assertEqual(hint, "no_udp_reply")
+        self.assertIn("Local API", note)
+
+    def test_paused_when_monitoring_off(self) -> None:
+        hint, _ = _reachability_hint({"online": False}, polling_enabled=False)
+        self.assertEqual(hint, "paused")
 
 
 class ReadOnlyApiTests(unittest.TestCase):

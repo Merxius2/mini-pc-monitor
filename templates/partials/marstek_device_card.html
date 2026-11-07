@@ -19,8 +19,8 @@
     </span>
   </header>
 
-  {% if dev.error and not dev.online %}
-  <p class="marstek-card-error">{{ dev.error }}</p>
+  {% if not dev.online %}
+  {% include "partials/marstek_reachability_note.html" %}
   {% endif %}
 
   <div class="marstek-soc-wrap">

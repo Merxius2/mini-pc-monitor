@@ -595,6 +595,53 @@ def _build_display(methods: dict[str, Any], meta: dict[str, Any]) -> dict[str, A
     }
 
 
+def _reachability_hint(status: dict[str, Any], *, polling_enabled: bool) -> tuple[str, str]:
+    if not polling_enabled:
+        return (
+            "paused",
+            "Background monitoring is off — this dashboard is not sending UDP requests.",
+        )
+    if status.get("online"):
+        return "ok", ""
+    err_raw = str(status.get("error") or "")
+    err_lower = err_raw.lower()
+    if "monitoring paused" in err_lower:
+        return "paused", err_raw
+    if "waiting for background poll" in err_lower:
+        return "pending", "Waiting for the next background poll (Wi‑Fi devices can take a minute)."
+
+    errors = status.get("errors") or {}
+    methods = status.get("methods") or {}
+    get_err = str(errors.get("Marstek.GetDevice") or "").lower()
+
+    if not methods or "Marstek.GetDevice" not in methods:
+        if "timeout" in get_err or get_err == "" and "Marstek.GetDevice" in errors:
+            return (
+                "no_udp_reply",
+                "No reply on the configured UDP port. The Marstek app may have "
+                "Local API turned off, the IP may be wrong, or the unit may be offline. "
+                "Re-enable Local API in the app (matching the device port below) and verify the IP.",
+            )
+        if errors:
+            return (
+                "no_udp_reply",
+                "Could not query this device. Check Local API in the Marstek app, "
+                "the IP address, and that the unit is on the same network.",
+            )
+
+    if err_raw:
+        return "error", err_raw
+    return "offline", "Device did not respond."
+
+
+def apply_reachability_hints(status: dict[str, Any], *, polling_enabled: bool) -> dict[str, Any]:
+    hint, note = _reachability_hint(status, polling_enabled=polling_enabled)
+    out = dict(status)
+    out["status_hint"] = hint
+    out["status_note"] = note
+    return out
+
+
 def poll_marstek_device(config: MarstekConfig, ip: str) -> dict[str, Any]:
     ip = normalize_ip(ip)
     delay = _inter_request_delay(config, ip)
@@ -663,7 +710,7 @@ def poll_marstek_device(config: MarstekConfig, ip: str) -> dict[str, Any]:
         status["error"] = ", ".join(f"{k}: {v}" for k, v in status["errors"].items() if v != "timeout")
         if not status["error"]:
             status["error"] = None
-    return status
+    return apply_reachability_hints(status, polling_enabled=True)
 
 
 def _first_number(*values: Any) -> Any:
@@ -823,6 +870,8 @@ def get_marstek_summary(config: MarstekConfig) -> dict[str, Any]:
                 "power_flow": disp.get("power_flow") or "idle",
                 "ongrid_power": disp.get("ongrid_power"),
                 "ct_connected": disp.get("ct_connected"),
+                "status_hint": dev.get("status_hint"),
+                "status_note": dev.get("status_note"),
             }
         )
     return {
@@ -878,6 +927,7 @@ def get_marstek_dashboard(config: MarstekConfig) -> dict[str, Any]:
                 "device": row.get("device"),
             }
         )
+    statuses = [apply_reachability_hints(s, polling_enabled=polling_on) for s in statuses]
     alerts = update_ct_alerts(config, store, statuses) if polling_on else []
     return {
         "enabled": True,
