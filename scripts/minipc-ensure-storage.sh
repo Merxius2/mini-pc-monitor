@@ -29,6 +29,10 @@ md0_active() {
   grep -qE '^md0[[:space:]]*:' /proc/mdstat 2>/dev/null
 }
 
+md0_degraded() {
+  md0_broken || grep -qE '^md0[[:space:]]*:.*\[[[:space:]]*2/1[[:space:]]*\]' /proc/mdstat 2>/dev/null
+}
+
 wait_for_members() {
   local uuid="$1"
   local want="${2:-2}"
@@ -178,11 +182,20 @@ if storage_mounted_readonly; then
 fi
 
 if mountpoint -q "$MOUNT"; then
+  if md0_degraded; then
+    minipc_md_stop_for_reassemble
+    assemble_md0
+    if ! mountpoint -q "$MOUNT" && [ -b "$MD_DEV" ]; then
+      timeout 20 mount "$MOUNT" 2>/dev/null || mount "$MD_DEV" "$MOUNT" 2>/dev/null || true
+    fi
+  fi
   if storage_mounted_readonly; then
     mount -o remount,rw "$MOUNT" 2>/dev/null || true
   fi
-  minipc_storage_stack_start
-  exit 0
+  if mountpoint -q "$MOUNT"; then
+    minipc_storage_stack_start
+    exit 0
+  fi
 fi
 
 if ! [ -b "$MD_DEV" ]; then
