@@ -7,7 +7,7 @@ Dashboard pages:
 
 If the **dashboard** shows a storage alert (read-only or degraded RAID), fix the array before using torrents or Samba.
 
-**Boot without the enclosure:** If USB RAID is unplugged, `minipc-storage.service` should finish within ~90s and the OS should still reach multi-user. Storage/Samba/torrents stay offline until you plug in the enclosure and use **Repair RAID now** on the dashboard. If an older install hangs at `minipc-storage.service`, from emergency mode run `sudo systemctl disable minipc-storage.service`, add `nofail` to the `/mnt/storage` line in `/etc/fstab`, then reboot; after pulling repo updates, re-run `bash scripts/install-storage-raid.sh`.
+**Boot without the enclosure:** Unplugging USB RAID to recover from a stuck boot is a one-time rescue trick, not normal operation. After `install-storage-raid.sh`, an absent enclosure should **not** block boot: `minipc-ensure-storage.sh` exits in ~5–8s, `mount` is capped at 20s, fstab uses **`nofail`**, and `minipc-storage.service` has **`TimeoutStartSec=90`**. Samba/torrents stay offline until you plug the enclosure back in and use **Repair RAID now** on the dashboard.
 
 **Disk names (`sda` / `sdb` swapping):** The mirror lives in an **external enclosure on USB-C 3.2**. USB disks often appear in a different order after each boot or wake, so `/dev/sdX` letters are not stable. The mini-PC stack ignores `sdX` for RAID and always assembles `md0` from **`/dev/disk/by-id/…`** (serial / WWN symlinks). `minipc-ensure-storage.sh` waits for udev after wake, syncs the `devices=` line in `/etc/mdadm/mdadm.conf`, then assembles. Install once with `install-storage-raid.sh` (updates initramfs). To refresh manually: `sudo minipc-mdadm-sync-conf.sh` then `sudo update-initramfs -u`.
 

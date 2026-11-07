@@ -72,8 +72,21 @@ assemble_md0() {
   fi
 
   udevadm settle 2>/dev/null || true
-  wait_for_members "$uuid" 2 || wait_for_members "$uuid" 1 || true
   mapfile -t members < <(minipc_md_member_by_id "$uuid")
+  if [ "${#members[@]}" -eq 0 ]; then
+    for attempt in $(seq 1 8); do
+      sleep 1
+      udevadm settle 2>/dev/null || true
+      mapfile -t members < <(minipc_md_member_by_id "$uuid")
+      [ "${#members[@]}" -gt 0 ] && break
+    done
+    if [ "${#members[@]}" -eq 0 ]; then
+      return 0
+    fi
+  else
+    wait_for_members "$uuid" 2 || wait_for_members "$uuid" 1 || true
+    mapfile -t members < <(minipc_md_member_by_id "$uuid")
+  fi
   sync_mdadm_conf "$uuid" "${members[@]}"
 
   if md0_active && ! md0_broken; then
@@ -107,7 +120,7 @@ minipc_storage_stack_start() {
 
 # Skip quickly when the USB enclosure is unplugged (avoid 45s member wait + hung mount).
 _early_uuid="$(array_uuid 2>/dev/null || true)"
-if [ -n "${_early_uuid:-}" ] && ! [ -b "$MD_DEV" ] && ! mountpoint -q "$MOUNT"; then
+if [ -n "${_early_uuid:-}" ] && ! mountpoint -q "$MOUNT"; then
   udevadm settle 2>/dev/null || true
   mapfile -t _early_members < <(minipc_md_member_by_id "$_early_uuid" 2>/dev/null || true)
   if [ "${#_early_members[@]}" -eq 0 ]; then
@@ -119,6 +132,9 @@ if [ -n "${_early_uuid:-}" ] && ! [ -b "$MD_DEV" ] && ! mountpoint -q "$MOUNT"; 
     done
   fi
   if [ "${#_early_members[@]}" -eq 0 ]; then
+    if [ -b "$MD_DEV" ] || md0_active; then
+      mdadm --stop "$MD_DEV" >/dev/null 2>&1 || true
+    fi
     logger -t minipc-ensure-storage "No RAID members on USB; skipping mount (plug in enclosure and run repair from dashboard)"
     exit 0
   fi
