@@ -44,6 +44,8 @@ for unit in smbd.service transmission-daemon.service; do
   esac
 done
 
+sudo rm -f /etc/systemd/system/local-fs.target.wants/minipc-storage.service
+sudo systemctl disable minipc-storage.service 2>/dev/null || true
 sudo systemctl daemon-reload
 sudo systemctl enable minipc-storage.service
 
