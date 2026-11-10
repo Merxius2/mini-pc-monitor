@@ -16,7 +16,7 @@ This documents how the machine should boot, what broke in Nov 2026, and how the 
 
 **Suspend/resume:** `minipc-storage` sleep hook runs `minipc-ensure-storage.sh` with a longer USB wait (45s).
 
-**Nightly schedule (21:00–09:00):** `minipc-nightly-off` uses **`rtcwake -m off`** (power off + RTC wake), not RAM suspend. S3 suspend left the PN50 **running but without LAN/HDMI** after the 08:00 wake (2026-11-08). If you need 24/7 uptime, disable `minipc-nightly-off.timer` on Management.
+**Nightly schedule (21:00–09:00):** `minipc-nightly-off` uses **`rtcwake -m mem`** (suspend to RAM + RTC wake). If the box is on but unreachable after wake, try a reboot; use Management to disable the timer for 24/7 uptime.
 
 ## Incidents we hit (and fixes)
 

@@ -32,7 +32,6 @@ target=$(date -d "today $WAKE" +%s)
 if [ "$target" -le $((now + 120)) ]; then
   target=$(date -d "tomorrow $WAKE" +%s)
 fi
-logger -t minipc-schedule "Stopping daytime keep-awake; power off until $(date -d "@$target") (RTC wake)"
+logger -t minipc-schedule "Stopping daytime keep-awake; suspending until $(date -d "@$target")"
 systemctl stop minipc-keep-awake.service >/dev/null 2>&1 || true
-# RAM suspend (-m mem) often breaks NIC/HDMI resume on this PN50; off+wake = clean morning boot.
-exec /usr/sbin/rtcwake -m off -t "$target"
+exec /usr/sbin/rtcwake -m mem -t "$target"

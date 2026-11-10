@@ -1,5 +1,5 @@
 [Unit]
-Description=Power off until morning RTC wake (clean boot, not S3 suspend)
+Description=Suspend mini PC until morning RTC wake
 Documentation=man:rtcwake(8)
 
 [Service]
