@@ -34,4 +34,12 @@ if [ "$target" -le $((now + 120)) ]; then
 fi
 logger -t minipc-schedule "Stopping daytime keep-awake; suspending until $(date -d "@$target")"
 systemctl stop minipc-keep-awake.service >/dev/null 2>&1 || true
+
+# s2idle tends to resume more reliably than deep on this PN50 (still suspend-to-RAM).
+if [ -w /sys/power/mem_sleep ] && grep -q s2idle /sys/power/mem_sleep 2>/dev/null; then
+  echo s2idle > /sys/power/mem_sleep 2>/dev/null || true
+  logger -t minipc-schedule "Using s2idle for nightly suspend"
+fi
+
+sync
 exec /usr/sbin/rtcwake -m mem -t "$target"

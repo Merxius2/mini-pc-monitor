@@ -16,7 +16,7 @@ This documents how the machine should boot, what broke in Nov 2026, and how the 
 
 **Suspend/resume:** `minipc-storage` sleep hook runs `minipc-ensure-storage.sh` with a longer USB wait (45s).
 
-**Nightly schedule (21:00–09:00):** `minipc-nightly-off` uses **`rtcwake -m mem`** (suspend to RAM + RTC wake). If the box is on but unreachable after wake, try a reboot; use Management to disable the timer for 24/7 uptime.
+**Nightly schedule (22:00–09:00):** `minipc-nightly-off` uses **`rtcwake -m mem`** with **`s2idle`** when available (more reliable resume than `deep` on the PN50). On wake: `minipc-storage` sleep hook runs **`minipc-resume-recover.sh`** (NetworkManager, keep-awake, Tailscale, dashboard) plus RAID remount; **`minipc-wake-health.timer`** at **09:03** runs a second pass if LAN/dashboard are still down. Re-install: `bash scripts/install-sleep-schedule.sh`. For 24/7, disable the schedule on Management.
 
 ## Incidents we hit (and fixes)
 

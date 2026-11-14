@@ -1,12 +1,16 @@
 #!/bin/sh
-# systemd-sleep(8): re-assemble RAID and remount /mnt/storage after wake.
+# systemd-sleep(8): sync before suspend; network/RAID recovery after wake.
 set -e
 
 case "$1" in
   pre)
     sync
+    logger -t minipc-storage "pre-suspend sync (${2:-})"
     ;;
   post)
+    if [ -x /usr/local/sbin/minipc-resume-recover.sh ]; then
+      /usr/local/sbin/minipc-resume-recover.sh
+    fi
     MINIPC_MEMBER_WAIT_MAX=45 /usr/local/sbin/minipc-ensure-storage.sh
     ;;
 esac

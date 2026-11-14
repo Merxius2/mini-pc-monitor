@@ -10,7 +10,8 @@ Runtime target: **192.168.1.30** · user `sylvester` · repo path `~/mini-pc-mon
 | `pricewatch.service` | Price tracking dashboard — [http://192.168.1.30:8081/](http://192.168.1.30:8081/) (port `8081` when co-installed with this dashboard on `8080`) |
 | `mini-pc-monitor-deploy.timer` | Poll GitHub every 3 min → pull + restart if `main` changed |
 | `azerothcore.service` | AzerothCore WoW server — toggle from dashboard; stop also shuts down Apache (player map) and MySQL |
-| `minipc-nightly-off.timer` | Suspend at 21:00 — view/edit on dashboard **Mini-PC management** page |
+| `minipc-nightly-off.timer` | Suspend at 22:00 (wake ~09:00) — **Mini-PC management** · after changes run `bash scripts/install-sleep-schedule.sh` |
+| `minipc-wake-health.timer` | 09:03 LAN/dashboard check after wake (with sleep install) |
 | `minipc-keep-awake.timer` | Start keep-awake inhibitor at 09:00 |
 | `homeassistant.service` | Home Assistant — [http://192.168.1.30:8123/](http://192.168.1.30:8123/) · see [home-assistant.md](home-assistant.md) |
 | `domoticz.service` | Domoticz + RFLink 433 MHz — [http://192.168.1.30:8082/](http://192.168.1.30:8082/) · see [domoticz.md](domoticz.md) |

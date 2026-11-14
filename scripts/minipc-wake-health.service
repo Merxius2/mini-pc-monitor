@@ -1,0 +1,8 @@
+[Unit]
+Description=Backup network check after scheduled morning wake
+After=minipc-keep-awake.service
+ConditionPathExists=/usr/local/sbin/minipc-wake-health.sh
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/minipc-wake-health.sh
